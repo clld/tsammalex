@@ -1,25 +1,36 @@
 from __future__ import unicode_literals
 import sys
 import json
+import re
 
 from path import path
 from clld.util import slug
-from clld.scripts.util import initializedb, Data
+from clld.scripts.util import initializedb, Data, bibtex2source
 from clld.db.meta import DBSession
 from clld.db.models import common
 
 import tsammalex
 from tsammalex import models
 from tsammalex.scripts import wiki
+from tsammalex.scripts.refs import get_refs
 
 
 files_dir = path('/home/robert/venvs/clld/tsammalex/data/files')
+year_pages = re.compile('\([0-9]{4}:(?P<pages>[0-9]+)\)')
+
+#
+# TODO: fix plantzafrica links! they only go to the frameset!
+#
 
 
 def main(args):
     #wiki.get_categories(args)
     #return
     data = Data()
+
+    refs = wiki.get_refs(args)
+    for rec in refs.records:
+        data.add(common.Source, rec.id, _obj=bibtex2source(rec))
 
     dataset = common.Dataset(
         id=tsammalex.__name__,
@@ -89,19 +100,15 @@ def main(args):
                     parameter=s,
                     language=lang)
                 if refs:
-                    ref = spec['references'][refs[0]]
-                    if isinstance(ref, list):
-                        # TODO: handle urls properly!
-                        ref = ref[0]
-                    for k, ref_ in enumerate(wiki.split(ref)):
-                        #
-                        # TODO: handle page info (2002:123)
-                        #
-                        if ref_ in data['Source']:
-                            source = data['Source'][ref_]
+                    ref = list(get_refs(spec['references'][refs[0]]))
+                    for k, ref_ in enumerate(ref):
+                        if isinstance(ref_, basestring):
+                            vs.source = ref_
                         else:
-                            source = data.add(common.Source, ref_, id='%s-%s-%s' % (s.id, lang.id, k), name=ref_)
-                        DBSession.add(common.ValueSetReference(valueset=vs, source=source))
+                            ref_, pages = ref_
+                            source = data['Source'][ref_]
+                            DBSession.add(common.ValueSetReference(
+                                valueset=vs, source=source, description=pages))
             for k, word in enumerate(words):
                 word, ref = word
                 id_ = '%s-%s-%s' % (s.id, lang.id, k)

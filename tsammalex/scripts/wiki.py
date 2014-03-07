@@ -7,6 +7,12 @@ import requests
 from bs4 import BeautifulSoup, NavigableString
 from purl import URL
 
+from clld.lib import bibtex
+
+
+def get_refs(args):
+    return bibtex.Database.from_file(args.data_file('wiki', 'refs.bib'))
+
 
 def text(n):
     if isinstance(n, (NavigableString, unicode)):
@@ -376,14 +382,15 @@ Carruthers ed. (2000:13), <a href="http://en.wikipedia.org/wiki/Spirobolida" cla
                 if getattr(child, 'name', None) == 'a':
                     if child['href'].startswith('#'):
                         continue
-                    refs.append((child['href'], child.string))
+                    refs.append(child['href'])
                 else:
                     if text(child):
                         refs.append(text(child))
-            if len(refs) > 1:
-                print refs
+            #if len(refs) > 1:
+            #    print refs
             if refs:
-                species.references.append(refs[0])
+                species.references.append('|'.join(refs))
+                #print ('|'.join(refs)).encode('utf8')
 
     for tr in tables[0].find_all('tr'):
         lang, words = map(text, list(tr.find_all('td')))
@@ -433,9 +440,12 @@ def get_categories(args):
     with open(args.data_file('species.json'), 'w') as fp:
         json.dump({k: v.json() for k, v in species.items()}, fp)
     ps = {}
-    for s in species.values():
-        for i in s.images:
-            if 'permission' in i['metadata']:
-                ps[i['metadata']['permission'].get('license')] = 1
+    with open('refs.txt', 'w') as fp:
+        for s in species.values():
+            for i in s.images:
+                if 'permission' in i['metadata']:
+                    ps[i['metadata']['permission'].get('license')] = 1
+            for ref in s.references:
+                fp.write(('%s\n' % ref).encode('utf8'))
     for k in ps.keys():
         print k

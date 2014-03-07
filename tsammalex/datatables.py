@@ -1,9 +1,9 @@
-from clld.web.datatables.base import Col
+from clld.web.datatables.base import Col, LinkCol
 from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
-from clld.web.util.helpers import HTML
+from clld.web.util.helpers import HTML, external_link, linked_references
 from clld.db.util import get_distinct_values
-from clld.db.models.common import Parameter
+from clld.db.models.common import Parameter, Value, Language
 
 from tsammalex.models import (
     Ecoregion, SpeciesEcoregion,
@@ -14,6 +14,7 @@ from tsammalex.models import (
 
 class ThumbnailCol(Col):
     def format(self, item):
+        item = self.get_obj(item)
         if item.thumbnail:
             return HTML.img(src=self.dt.req.file_url(item.thumbnail))
         return ''
@@ -65,10 +66,49 @@ class Species(Parameters):
         return res
 
 
+class RefsCol(Col):
+    __kw__ = dict(bSearchable=False, bSortable=False)
+
+    def format(self, item):
+        lis = []
+        if item.valueset.source:
+            s = item.valueset.source
+            if s.startswith('http://'):
+                label = s
+                for t in 'wikipedia plantzafrica'.split():
+                    if t in s:
+                        label = t
+                        break
+                lis.append(external_link(s, label))
+            else:
+                lis.append(s)
+        lis.append(linked_references(self.dt.req, item.valueset))
+        return HTML.ul(*lis, class_='unstyled')
+
+
 class Words(Values):
     def col_defs(self):
-        res = Values.col_defs(self)
-        return res[1:-1]
+        res = []
+        if self.language:
+            res = [
+                ThumbnailCol(self, '_', get_object=lambda i: i.valueset.parameter),
+                LinkCol(
+                    self, 'species',
+                    model_col=Parameter.name,
+                    get_object=lambda i: i.valueset.parameter),
+            ]
+        elif self.parameter:
+            res = [
+                LinkCol(
+                    self, 'language',
+                    model_col=Language.name,
+                    get_object=lambda i: i.valueset.language)
+            ]
+        res.extend([
+            Col(self, 'word', model_col=Value.name),
+            RefsCol(self, 'references'),
+        ])
+        return res
 
     def get_options(self):
         if self.parameter:
