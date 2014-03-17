@@ -1,9 +1,25 @@
 <%inherit file="../${context.get('request').registry.settings.get('clld.app_template', 'app.mako')}"/>
 <%namespace name="util" file="../util.mako"/>
 <%! active_menu_item = "parameters" %>
-<%block name="title">${_('Parameter')} ${ctx.name}</%block>
+<%block name="title">${_('Parameter')} ${ctx.name} (${ctx.description})</%block>
 
-<h2>${ctx.name}</h2>
+% if ctx.family or ctx.genus:
+<ul class="breadcrumb">
+    % if ctx.family:
+    <li class="active">Family: ${ctx.family} <span class="divider">/</span></li>
+    % endif
+    % if ctx.genus:
+    <li>Genus: ${h.link(request, ctx.genus)} <span class="divider">/</span></li>
+    % endif
+    % if ctx.is_genus:
+    <li class="active">Genus: ${ctx.name}</li>
+    % else:
+    <li class="active">Species: ${ctx.name}</li>
+    % endif
+</ul>
+% endif
+
+<h2>${ctx.description or ctx.name}</h2>
 
 <%def name="sidebar()">
     <div style="margin-top: 5px;">
@@ -28,8 +44,12 @@
     ${request.get_datatable('values', h.models.Value, parameter=ctx).render()}
 </%def>
 
-% if ctx.description:
-<p>${ctx.description}</p>
+% if ctx.members:
+<ul>
+    % for g in ctx.members:
+    <li>${h.link(request, g)}</li>
+    % endfor
+</ul>
 % endif
 
 % for f in filter(lambda f_: f_.name.startswith('small') or f_.name.startswith('large'), ctx._files):

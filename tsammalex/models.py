@@ -24,6 +24,11 @@ from clld.db.models.common import Parameter, IdNameDescriptionMixin
 @implementer(interfaces.IParameter)
 class Species(Parameter, CustomModelMixin):
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
+    is_genus = Column(Boolean, default=False)
+    family = Column(Unicode)
+    genus_pk = Column(Integer, ForeignKey('species.pk'))
+    members = relationship(
+        'Species', foreign_keys=[genus_pk], backref=backref('genus', remote_side=[pk]))
     eol_id = Column(String)
     wikipedia_url = Column(String)
 

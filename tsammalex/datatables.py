@@ -1,18 +1,22 @@
+from sqlalchemy.orm import aliased, joinedload, joinedload_all
+
 from clld.web.datatables.base import Col, LinkCol
 from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
 from clld.web.util.helpers import HTML, external_link, linked_references
 from clld.db.util import get_distinct_values
-from clld.db.models.common import Parameter, Value, Language
+from clld.db.models.common import Parameter, Value, Language, ValueSet
 
 from tsammalex.models import (
     Ecoregion, SpeciesEcoregion,
     Country, SpeciesCountry,
-    Category, SpeciesCategory
+    Category, SpeciesCategory, Species
 )
 
 
 class ThumbnailCol(Col):
+    __kw__ = dict(bSearchable=False, bSortable=False)
+
     def format(self, item):
         item = self.get_obj(item)
         if item.thumbnail:
@@ -46,23 +50,37 @@ class EcoregionCol(CatCol):
     __spec__ = ('ecoregions', Ecoregion)
 
 
-class Species(Parameters):
+class SpeciesTable(Parameters):
+    def __init__(self, *args, **kw):
+        self.genus = aliased(Species)
+        Parameters.__init__(self, *args, **kw)
+
     def base_query(self, query):
-        query = query \
+        query = query.filter(Species.is_genus == False) \
             .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk) \
             .outerjoin(Category, SpeciesCategory.category_pk == Category.pk)\
             .outerjoin(SpeciesCountry, SpeciesCountry.species_pk == Parameter.pk) \
             .outerjoin(Country, SpeciesCountry.country_pk == Country.pk)\
             .outerjoin(SpeciesEcoregion, SpeciesEcoregion.species_pk == Parameter.pk)\
-            .outerjoin(Ecoregion, SpeciesEcoregion.ecoregion_pk == Ecoregion.pk)
+            .outerjoin(Ecoregion, SpeciesEcoregion.ecoregion_pk == Ecoregion.pk)\
+            .outerjoin(self.genus, self.genus.pk == Species.genus_pk)\
+            .options(
+                joinedload(Species.genus),
+                joinedload(Species.categories),
+                joinedload(Species.ecoregions),
+                joinedload(Species.countries))
         return query.distinct()
 
     def col_defs(self):
-        res = Parameters.col_defs(self)
+        res = Parameters.col_defs(self)[1:]
+        res[0].js_args['sTitle'] = 'Species'
+        res.append(Col(self, 'description', sTitle='Name')),
+        res.append(LinkCol(self, 'genus', model_col=self.genus.name, get_object=lambda i: i.genus)),
+        res.append(Col(self, 'family', model_col=Species.family)),
         res.append(ThumbnailCol(self, 'thumbnail'))
-        res.append(CategoryCol(self, 'categories'))
-        res.append(EcoregionCol(self, 'ecoregions'))
-        res.append(CountryCol(self, 'countries'))
+        res.append(CategoryCol(self, 'categories', bSortable=False))
+        res.append(EcoregionCol(self, 'ecoregions', bSortable=False))
+        res.append(CountryCol(self, 'countries', bSortable=False))
         return res
 
 
@@ -75,7 +93,7 @@ class RefsCol(Col):
             s = item.valueset.source
             if s.startswith('http://'):
                 label = s
-                for t in 'wikipedia plantzafrica'.split():
+                for t in 'wikimedia wikipedia plantzafrica'.split():
                     if t in s:
                         label = t
                         break
@@ -86,7 +104,20 @@ class RefsCol(Col):
         return HTML.ul(*lis, class_='unstyled')
 
 
+class MdCol(Col):
+    __kw__ = dict(bSearchable=False, bSortable=False)
+
+    def format(self, item):
+        return HTML.ul(*[HTML.li(HTML.i(v)) for v in item.jsondatadict.values()], class_='unstyled')
+
+
 class Words(Values):
+    def base_query(self, query):
+        query = Values.base_query(self, query)
+        if self.language:
+            query = query.options(joinedload_all(Value.valueset, ValueSet.parameter))
+        return query
+
     def col_defs(self):
         res = []
         if self.language:
@@ -96,6 +127,10 @@ class Words(Values):
                     self, 'species',
                     model_col=Parameter.name,
                     get_object=lambda i: i.valueset.parameter),
+                Col(
+                    self, 'name',
+                    model_col=Parameter.description,
+                    get_object=lambda i: i.valueset.parameter),
             ]
         elif self.parameter:
             res = [
@@ -104,10 +139,11 @@ class Words(Values):
                     model_col=Language.name,
                     get_object=lambda i: i.valueset.language)
             ]
-        res.extend([
-            Col(self, 'word', model_col=Value.name),
-            RefsCol(self, 'references'),
-        ])
+        res.append(Col(self, 'word', model_col=Value.name))
+        if self.language:
+            res.append(Col(self, 'exact meaning', model_col=Value.description))
+            res.append(MdCol(self, 'md'))
+        res.append(RefsCol(self, 'references'))
         return res
 
     def get_options(self):
@@ -116,5 +152,5 @@ class Words(Values):
 
 
 def includeme(config):
-    config.register_datatable('parameters', Species)
+    config.register_datatable('parameters', SpeciesTable)
     config.register_datatable('values', Words)

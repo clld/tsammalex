@@ -5,7 +5,7 @@
 ##
 <%block name="header">
     <a href="${request.route_url('dataset')}">
-        <img src="${request.static_url('tsammalex:static/header.gif')}"/>
+        <img src="${request.static_url('tsammalex:static/tsamma.png')}"/>
     </a>
 </%block>
 

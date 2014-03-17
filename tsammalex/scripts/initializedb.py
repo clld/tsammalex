@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 import sys
 import json
 import re
+from collections import defaultdict
 
 from path import path
 from clld.util import slug
@@ -13,6 +14,7 @@ import tsammalex
 from tsammalex import models
 from tsammalex.scripts import wiki
 from tsammalex.scripts.refs import get_refs
+from tsammalex.scripts.word_data import parsed_word
 
 
 files_dir = path('/home/robert/venvs/clld/tsammalex/data/files')
@@ -24,7 +26,7 @@ year_pages = re.compile('\([0-9]{4}:(?P<pages>[0-9]+)\)')
 
 
 def main(args):
-    #wiki.get_categories(args)
+    wiki.get_categories(args)
     #return
     data = Data()
 
@@ -49,11 +51,31 @@ def main(args):
     with open(args.data_file('species.json')) as fp:
         species = json.load(fp)
 
+    genus_names = defaultdict(list)
+
     for i, spec in enumerate(species.values()):
+        if spec['genus']:
+            gid = 'g:' + spec['genus']
+            if gid not in data['Species']:
+                g = data.add(
+                    models.Species, gid,
+                    id='g' + str(i),
+                    name=spec['genus'],
+                    is_genus=True,
+                    family=spec['family'])
+                DBSession.flush()
+            else:
+                g = data['Species'][gid]
+        else:
+            g = None
+
         s = data.add(
             models.Species, spec['name'],
             id=str(i),
+            genus_pk=g.pk if g else None,
             name=spec['name'],
+            description=spec['description'],
+            family=spec['family'],
             wikipedia_url=spec['wikipedia'].get('fullurl'),
             eol_id=spec['eol'].get('id'))
 
@@ -111,14 +133,31 @@ def main(args):
                                 valueset=vs, source=source, description=pages))
             for k, word in enumerate(words):
                 word, ref = word
+                genus = None
+                # TODO: add words for genera!
+                if ':' in word:
+                    genus, word = [t.strip() for t in word.split(':', 1)]
+
                 id_ = '%s-%s-%s' % (s.id, lang.id, k)
                 if len(refs) >= 2:
                     vs = common.ValueSet(
                         id=id_,
                         parameter=s,
                         language=lang)
+                if genus:
+                    if not g:
+                        print 'no english genus name:', s.name, s.description
+                    else:
+                        if genus not in genus_names['%s-%s' % (lang.id, g.id)]:
+                            gvs = common.ValueSet(
+                                id='g-' + id_,
+                                parameter=g,
+                                language=lang)
+                            DBSession.add(common.Value(valueset=gvs, id='g-' + id_, name=genus))
+                            genus_names['%s-%s' % (lang.id, g.id)].append(genus)
                     # TODO: add refs here!
-                DBSession.add(common.Value(valueset=vs, id=id_, name=word))
+                word, desc, classes = parsed_word(word)
+                DBSession.add(common.Value(valueset=vs, id=id_, name=word, description=desc, jsondata=classes))
 
 
 def prime_cache(args):

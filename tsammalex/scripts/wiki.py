@@ -243,6 +243,8 @@ def get_img(args, gb):
 class Species(object):
     def __init__(self, name):
         self.name = name
+        self.family = None
+        self.genus = None
         self.other_data = {}
         self.categories = []
         self.names = {}
@@ -254,7 +256,7 @@ class Species(object):
         self.wikipedia = {}
 
     def json(self):
-        return {k: getattr(self, k) for k in 'name categories names images countries ecoregions references eol wikipedia other_data'.split()}
+        return {k: getattr(self, k) for k in 'name description genus family categories names images countries ecoregions references eol wikipedia other_data'.split()}
 
 
 def parse_species(args, bs):
@@ -369,10 +371,17 @@ Carruthers ed. (2000:13), <a href="http://en.wikipedia.org/wiki/Spirobolida" cla
         return
 
     species = Species(bs.find('h1').string)
-    species.description = ' '.join(bs.find('p').stripped_strings)
 
-    for p in bs.find_all('p'):
-        species.other_data.update(parse_pseudo_dl(p))
+    for i, p in enumerate(bs.find_all('p')):
+        if i == 0:
+            species.description = text(p.find('font', size='5'))
+            if species.description and ':' in species.description:
+                genus, desc = species.description.split(':', 1)
+                species.genus = genus.strip()
+                species.description = desc.strip()
+            species.family = text(p.find('font', size='3'))
+        else:
+            species.other_data.update(parse_pseudo_dl(p))
 
     olrefs = bs.find('ol', class_='references')
     if olrefs:
@@ -400,10 +409,10 @@ Carruthers ed. (2000:13), <a href="http://en.wikipedia.org/wiki/Spirobolida" cla
     for tr in tables[1].find_all('tr'):
         tds = list(tr.find_all('td'))
         if tds[0].find('i').string == 'Countries':
-            species.countries = split(text(tds[1]))
+            species.countries = [t for t in split(text(tds[1])) if t != 'undefined_country']
 
         if tds[0].find('i').string == 'Ecoregions':
-            species.ecoregions = split(text(tds[1]))
+            species.ecoregions = [t for t in split(text(tds[1])) if t != 'undefined']
 
     gallery = bs.find('table', class_='gallery')
     if gallery:
