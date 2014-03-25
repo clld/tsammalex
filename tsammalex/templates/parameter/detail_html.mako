@@ -9,15 +9,15 @@
     <li class="active">Family: ${ctx.family} <span class="divider">/</span></li>
     % endif
     % if ctx.genus:
-    <li>Genus: ${h.link(request, ctx.genus)} <span class="divider">/</span></li>
+    <li class="active">Genus: ${ctx.genus} <span class="divider">/</span></li>
     % endif
-    % if ctx.is_genus:
-    <li class="active">Genus: ${ctx.name}</li>
-    % else:
     <li class="active">Species: ${ctx.name}</li>
-    % endif
 </ul>
 % endif
+
+<div style="float: right; margin-top: 10px;">
+${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
+</div>
 
 <h2>${ctx.description or ctx.name}</h2>
 
@@ -41,16 +41,11 @@
     </ul>
     </div>
     <h3>Names</h3>
+    <div class="well well-small">
+        ${request.map.render()}
+    </div>
     ${request.get_datatable('values', h.models.Value, parameter=ctx).render()}
 </%def>
-
-% if ctx.members:
-<ul>
-    % for g in ctx.members:
-    <li>${h.link(request, g)}</li>
-    % endfor
-</ul>
-% endif
 
 % for f in filter(lambda f_: f_.name.startswith('small') or f_.name.startswith('large'), ctx._files):
 <div class="fluid-row">

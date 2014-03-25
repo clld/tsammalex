@@ -15,20 +15,35 @@ from pyramid.decorator import reify
 
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
-from clld.db.models.common import Parameter, IdNameDescriptionMixin
+from clld.db.models.common import Parameter, IdNameDescriptionMixin, Value, Language
+
+
+class WordVariety(Base):
+    word_pk = Column(Integer, ForeignKey('word.pk'))
+    variety_pk = Column(Integer, ForeignKey('variety.pk'))
+
+
+class Variety(Base, IdNameDescriptionMixin):
+    language_pk = Column(Integer, ForeignKey('language.pk'))
+    language = relationship(Language, backref='varieties')
 
 
 #-----------------------------------------------------------------------------
 # specialized common mapper classes
 #-----------------------------------------------------------------------------
+@implementer(interfaces.IValue)
+class Word(Value, CustomModelMixin):
+    pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
+    phonetic = Column(Unicode)
+    grammatical_info = Column(Unicode)
+    varieties = relationship(Variety, secondary=WordVariety.__table__)
+
+
 @implementer(interfaces.IParameter)
 class Species(Parameter, CustomModelMixin):
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
-    is_genus = Column(Boolean, default=False)
     family = Column(Unicode)
-    genus_pk = Column(Integer, ForeignKey('species.pk'))
-    members = relationship(
-        'Species', foreign_keys=[genus_pk], backref=backref('genus', remote_side=[pk]))
+    genus = Column(Unicode)
     eol_id = Column(String)
     wikipedia_url = Column(String)
 
@@ -50,7 +65,8 @@ class SpeciesCountry(Base):
 
 
 class Country(Base, IdNameDescriptionMixin):
-    species = relationship(Species, secondary=SpeciesCountry.__table__, backref='countries')
+    species = relationship(
+        Species, secondary=SpeciesCountry.__table__, backref='countries')
 
 
 class SpeciesEcoregion(Base):
@@ -59,7 +75,8 @@ class SpeciesEcoregion(Base):
 
 
 class Ecoregion(Base, IdNameDescriptionMixin):
-    species = relationship(Species, secondary=SpeciesEcoregion.__table__, backref='ecoregions')
+    species = relationship(
+        Species, secondary=SpeciesEcoregion.__table__, backref='ecoregions')
 
 
 class SpeciesCategory(Base):
@@ -68,4 +85,5 @@ class SpeciesCategory(Base):
 
 
 class Category(Base, IdNameDescriptionMixin):
-    species = relationship(Species, secondary=SpeciesCategory.__table__, backref='categories')
+    species = relationship(
+        Species, secondary=SpeciesCategory.__table__, backref='categories')

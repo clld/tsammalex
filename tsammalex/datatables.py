@@ -10,7 +10,8 @@ from clld.db.models.common import Parameter, Value, Language, ValueSet
 from tsammalex.models import (
     Ecoregion, SpeciesEcoregion,
     Country, SpeciesCountry,
-    Category, SpeciesCategory, Species
+    Category, SpeciesCategory, Species,
+    Word, Variety, WordVariety,
 )
 
 
@@ -51,21 +52,15 @@ class EcoregionCol(CatCol):
 
 
 class SpeciesTable(Parameters):
-    def __init__(self, *args, **kw):
-        self.genus = aliased(Species)
-        Parameters.__init__(self, *args, **kw)
-
     def base_query(self, query):
-        query = query.filter(Species.is_genus == False) \
+        query = query \
             .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk) \
             .outerjoin(Category, SpeciesCategory.category_pk == Category.pk)\
             .outerjoin(SpeciesCountry, SpeciesCountry.species_pk == Parameter.pk) \
             .outerjoin(Country, SpeciesCountry.country_pk == Country.pk)\
             .outerjoin(SpeciesEcoregion, SpeciesEcoregion.species_pk == Parameter.pk)\
             .outerjoin(Ecoregion, SpeciesEcoregion.ecoregion_pk == Ecoregion.pk)\
-            .outerjoin(self.genus, self.genus.pk == Species.genus_pk)\
             .options(
-                joinedload(Species.genus),
                 joinedload(Species.categories),
                 joinedload(Species.ecoregions),
                 joinedload(Species.countries))
@@ -75,7 +70,7 @@ class SpeciesTable(Parameters):
         res = Parameters.col_defs(self)[1:]
         res[0].js_args['sTitle'] = 'Species'
         res.append(Col(self, 'description', sTitle='Name')),
-        res.append(LinkCol(self, 'genus', model_col=self.genus.name, get_object=lambda i: i.genus)),
+        res.append(Col(self, 'genus', model_col=Species.genus)),
         res.append(Col(self, 'family', model_col=Species.family)),
         res.append(ThumbnailCol(self, 'thumbnail'))
         res.append(CategoryCol(self, 'categories', bSortable=False))
@@ -104,17 +99,21 @@ class RefsCol(Col):
         return HTML.ul(*lis, class_='unstyled')
 
 
-class MdCol(Col):
-    __kw__ = dict(bSearchable=False, bSortable=False)
+class VarietiesCol(Col):
+    __kw__ = dict(bSortable=False)
+
+    def search(self, qs):
+        return Variety.pk == int(qs)
 
     def format(self, item):
-        return HTML.ul(*[HTML.li(HTML.i(v)) for v in item.jsondatadict.values()], class_='unstyled')
+        return ', '.join(v.name for v in item.varieties)
 
 
 class Words(Values):
     def base_query(self, query):
         query = Values.base_query(self, query)
         if self.language:
+            query = query.outerjoin(WordVariety, Variety)
             query = query.options(joinedload_all(Value.valueset, ValueSet.parameter))
         return query
 
@@ -142,7 +141,10 @@ class Words(Values):
         res.append(Col(self, 'word', model_col=Value.name))
         if self.language:
             res.append(Col(self, 'exact meaning', model_col=Value.description))
-            res.append(MdCol(self, 'md'))
+            res.append(Col(self, 'phonetic', model_col=Word.phonetic))
+            res.append(Col(self, 'grammatical_info', model_col=Word.grammatical_info))
+            if self.language.varieties:
+                res.append(VarietiesCol(self, 'variety', choices=[(v.pk, v.name) for v in self.language.varieties]))
         res.append(RefsCol(self, 'references'))
         return res
 

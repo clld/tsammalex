@@ -24,17 +24,6 @@ def split(s, sep=','):
     return [ss.strip() for ss in s.split(sep)]
 
 
-def split_words(s):
-    r = re.compile(r'(?:[^,(]|\([^)]*\))+')
-    ref = re.compile('\[(?P<refid>[0-9]+)\]$')
-    for word in r.findall(s):
-        m = ref.search(word.strip())
-        if m:
-            yield (word[:m.start()].strip(), int(m.group('refid')) - 1)
-        else:
-            yield (word.strip(), None)
-
-
 def get_data(args, name, type_, url, get_result):
     fpath = args.data_file('wiki', type_, urlsafe_b64encode(name))
     if not fpath.exists():
@@ -404,7 +393,7 @@ Carruthers ed. (2000:13), <a href="http://en.wikipedia.org/wiki/Spirobolida" cla
     for tr in tables[0].find_all('tr'):
         lang, words = map(text, list(tr.find_all('td')))
         if words:
-            species.names[lang] = list(split_words(words))
+            species.names[lang] = words
 
     for tr in tables[1].find_all('tr'):
         tds = list(tr.find_all('td'))

@@ -1,17 +1,17 @@
-# Translations template for tsammalex.
+# English translations for PROJECT.
 # Copyright (C) 2014 ORGANIZATION
-# This file is distributed under the same license as the tsammalex project.
+# This file is distributed under the same license as the PROJECT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2014.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: tsammalex 0.0\n"
+"Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2014-03-25 13:23+0100\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2014-03-25 13:23+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -19,9 +19,9 @@ msgstr ""
 
 #: tsammalex/__init__.py:9
 msgid "Parameter"
-msgstr ""
+msgstr "Species"
 
 #: tsammalex/__init__.py:10
 msgid "Parameters"
-msgstr ""
+msgstr "Species"
 

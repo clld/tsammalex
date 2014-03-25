@@ -17,6 +17,7 @@ requires = [
     'gunicorn',
     'psycopg2',
     'waitress',
+    'python-docx',
     ]
 
 setup(name='tsammalex',
