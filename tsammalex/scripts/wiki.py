@@ -125,6 +125,7 @@ LICENSES = dict([
     ('http://creativecommons.org/licenses/by-sa/3.0/', u'Creative Commons Attribution-ShareAlike 3.0'),
     ('http://creativecommons.org/licenses/by-sa/3.0/deed.en', u'Creative Commons Attribution-ShareAlike 3.0 Unported'),
     ('http://en.wikipedia.org/wiki/Public_domain', u'public domain'),
+    ('http://en.wikipedia.org/wiki/Creative_Commons', 'creative commons'),
     ('http://commons.wikimedia.org/wiki/GNU_Free_Documentation_License', u'GNU Free Documentation License'),
 ])
 
@@ -215,13 +216,9 @@ def get_img(args, gb):
             if key == 'name':
                 continue
             if key in ['author', 'date', 'place', 'comments', 'keywords']:
-                value = text(value)
+                value = text(value).strip()
             elif key == 'permission':
-                try:
-                    value = license(value)
-                except:
-                    print a['href']
-                    raise
+                value = license(value)
             else:
                 value = unicode(value).replace('<td>', '').replace('</td>', '').strip()
             if key and value:
@@ -416,7 +413,8 @@ def get_species(args, a, species):
     cat_name = a.string
     div = get(args, cat_path).find('div', id='mw-pages')
     if not div:
-        print 'no div mw-pages ---', cat_path
+        if 'Unknown' not in cat_path:
+            print 'no div mw-pages ---', cat_path
         return False
     for ul in div.find_all('ul'):
         for a in ul.find_all('a'):
@@ -445,5 +443,5 @@ def get_categories(args):
                     ps[i['metadata']['permission'].get('license')] = 1
             for ref in s.references:
                 fp.write(('%s\n' % ref).encode('utf8'))
-    for k in ps.keys():
-        print k
+    #for k in ps.keys():
+    #    print '*******', k

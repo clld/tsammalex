@@ -39,6 +39,9 @@ class Docx(Representation):
     def render(self, ctx, req):
         document = Document()
         self.write(ctx, req, document)
+        #
+        # TODO: add tsammalex license information!
+        #
         d = StringIO()
         document.save(d)
         d.seek(0)
