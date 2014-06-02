@@ -1,6 +1,7 @@
 # coding: utf8
 from __future__ import unicode_literals
 import re
+from itertools import chain
 from collections import defaultdict
 
 from clld.scripts.util import parsed_args
@@ -136,7 +137,34 @@ dz(h)òhè (3i/2i) (W, N)	dz(h)òhè	dzhòhè, dzòhè, dzhòè (?)((VARIANTS; U
             print word, '-----', n
         fp.write(('%s\t%s\t%s\n' % (word, n, n)).encode('utf8'))
 
-    return (
+    if lang != 'Taa':
+        return [(
+            Word(
+                name=n,
+                comment=comment,
+                description=desc,
+                phonetic=', '.join(classes['phonetic']) or None,
+                grammatical_info=', '.join(classes['grammar']) or None),
+            classes['ref'],
+            classes['variety'])]
+
+    if classes['variety']:
+        assert len(classes['variety']) == 1
+        varieties = [_s.strip() for _s in classes['variety'][0].split(',')]
+    else:
+        varieties = []
+    if varieties:
+        return [(
+            Word(
+                name=n,
+                comment=comment,
+                description=desc,
+                phonetic=', '.join(classes['phonetic']) or None,
+                grammatical_info=', '.join(classes['grammar']) or None),
+            classes['ref'],
+            [v]
+        ) for v in varieties]
+    return [(
         Word(
             name=n,
             comment=comment,
@@ -144,7 +172,7 @@ dz(h)òhè (3i/2i) (W, N)	dz(h)òhè	dzhòhè, dzòhè, dzhòè (?)((VARIANTS; U
             phonetic=', '.join(classes['phonetic']) or None,
             grammatical_info=', '.join(classes['grammar']) or None),
         classes['ref'],
-        classes['variety'])
+        [])]
 
 
 def parsed_words(words, fp, lang):
@@ -167,7 +195,7 @@ def parsed_words(words, fp, lang):
     ]:
         words = words.replace(s, t)
     words = list(split_words(words))
-    return filter(None, [parsed_word(words, i, fp, lang) for i in range(len(words))])
+    return filter(None, chain(*[parsed_word(words, i, fp, lang) for i in range(len(words))]))
 
 
 def main(args):

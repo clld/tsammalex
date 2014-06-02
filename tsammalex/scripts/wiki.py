@@ -174,8 +174,8 @@ def get_img(args, gb):
         l = {}
         for child in td.children:
             if isinstance(child, (NavigableString, unicode)):
-                child = unicode(child)
-                if not child.startswith('This file is licensed under'):
+                child = unicode(child).strip()
+                if child and not child.startswith('This file is licensed under'):
                     l['comment'] = child
             else:
                 assert child.name == 'a'

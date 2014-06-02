@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import sys
 import json
 import re
+from itertools import chain
 from collections import defaultdict
 
 from path import path
@@ -10,6 +11,7 @@ from clld.util import slug
 from clld.scripts.util import initializedb, Data, bibtex2source, glottocodes_by_isocode
 from clld.db.meta import DBSession
 from clld.db.models import common
+from clld.lib.dsv import reader
 
 import tsammalex
 from tsammalex import models
@@ -44,22 +46,32 @@ LANGUAGES = {
     'Otjiherero': {'ISO 639-3': 'her', 'geo': (-21.7, 18.1)},
     'Setswana': {'ISO 639-3': 'tsn', 'geo': (-25.7, 25.45)},
     'Shekgalagadi': {'ISO 639-3': 'xkv', 'geo': (-24.1, 23.0)},
-    'Taa': {'ISO 639-3': 'nmn', 'geo': (-23.7, 21.1), 'Dialects': {
-        'W': 'West ǃXoon (West Taa: near Corridor 13, Namibia)',
-        'N': "'Nǀoha - Ngwatle varieties ('ǃAma', western varieties of East Taa: near "
-             "Corridor 13/Namibia to Ukwi, Ngwatle, Zutshwa, and probably Monong, Make, "
-             "and Lehututu/Botswana)",
-        'E': "East ǃXoon (northern varieties of East Taa: Lone Tree, Kacgae, Bere, and "
-             "probably Hunhukwe/Botswana)",
-        'C': "Tshaasi (central varieties of East Taa: Kang, Maretswaane, Inalegolo, and "
-             "probably Khekhenye, Kanaku, and Khokhotsha)",
-        'S': "ǂHuan (Southern varieties of East Taa: Inalegolo and Khokhotsha/Botswana)"},
+
+    'Taa': {'ISO 639-3': 'nmn', 'geo': (-23.7, 21.1)#, 'Dialects': {
+
+        #'W': 'West ǃXoon (West Taa: near Corridor 13, Namibia)',
+        #'N': "'Nǀoha - Ngwatle varieties ('ǃAma', western varieties of East Taa: near "
+        #     "Corridor 13/Namibia to Ukwi, Ngwatle, Zutshwa, and probably Monong, Make, "
+        #     "and Lehututu/Botswana)",
+        #'E': "East ǃXoon (northern varieties of East Taa: Lone Tree, Kacgae, Bere, and "
+        #     "probably Hunhukwe/Botswana)",
+        #'C': "Tshaasi (central varieties of East Taa: Kang, Maretswaane, Inalegolo, and "
+        #     "probably Khekhenye, Kanaku, and Khokhotsha)",
+        #'S': "ǂHuan (Southern varieties of East Taa: Inalegolo and Khokhotsha/Botswana)"},
         # Numbers in parentheses refer to noun classes (singular/plural).
         # The orthographical representation is the one suggested by the DoBeS project.
+
     },
+
     'ǃXun': {'ISO 639-3': 'knw', 'geo': (-18.2, 19.1)},
     'ǂHoan': {'ISO 639-3': 'huc', 'geo': (-23.8, 24.7), 'name': "ǂ'Amkoe"},
     'IsiZulu': {'ISO 639-3': 'zul', 'geo': (-28.5, 30.6)},
+
+    'Taa/Tshaasi': {'ISO 639-3': 'nmn-t', 'geo': (-23.8, 22.7), 'description': "central varieties of East Taa: Kang, Maretswaane, Inalegolo, and probably Khekhenye, Kanaku, and Khokhotsha"},
+    'Taa/East ǃXoon': {'ISO 639-3': 'nmn-e', 'geo': (-22.8, 21.9), 'description': "northern varieties of East Taa: Lone Tree, Kacgae, Bere, and probably Hunhukwe/Botswana"},
+    'Taa/ǃAma': {'ISO 639-3': 'nmn-a', 'geo': (-23.7, 20.9), 'description': "'ǃAma', western varieties of East Taa: near Corridor 13/Namibia to Ukwi, Ngwatle, Zutshwa, and probably Monong, Make, and Lehututu/Botswana"},
+    'Taa/ǂHuan': {'ISO 639-3': 'nmn-h', 'geo': (-24.3, 22.9), 'description': "Southern varieties of East Taa: Inalegolo and Khokhotsha/Botswana"},
+    'Taa/West ǃXoon': {'ISO 639-3': 'nmn-w', 'geo': (-23.7, 19.9), 'description': "West Taa: near Corridor 13, Namibia"},
 }
 
 COUNTRIES = {
@@ -72,19 +84,12 @@ COUNTRIES = {
 }
 
 
-def main(args):
-    wiki.get_categories(args)
+def get_metadata():
     data = Data()
-    glottolog = glottocodes_by_isocode(
-        'postgresql://robert@/glottolog3', cols='id latitude longitude'.split())
-
-    refs = wiki.get_refs(args)
-    for rec in refs.records:
-        data.add(models.Bibrec, rec.id, _obj=bibtex2source(rec, cls=models.Bibrec))
-
     dataset = common.Dataset(
         id="tsammalex",
         name="Tsammalex",
+        description="A lexical database on plants and animals (preliminary version)",
         publisher_name="Max Planck Institute for Evolutionary Anthropology",
         publisher_place="Leipzig",
         publisher_url="http://www.eva.mpg.de",
@@ -99,10 +104,29 @@ def main(args):
             contributor=common.Contributor(id=spec[0], name=spec[1])))
 
     contrib = data.add(common.Contribution, 'tsammalex', name="Tsammalex", id="tsammalex")
+    glottolog = glottocodes_by_isocode(
+        'postgresql://robert@/glottolog3', cols='id latitude longitude'.split())
+    return data, contrib, glottolog
+
+
+def main(args):
+    taa_variety_map = {
+        'c': 'Taa/Tshaasi',
+        'e': 'Taa/East ǃXoon',
+        'n': 'Taa/ǃAma',
+        's': 'Taa/ǂHuan',
+        'w': 'Taa/West ǃXoon'}
+    data, contrib, glottolog = get_metadata()
+
+    wiki.get_categories(args)
+    refs = wiki.get_refs(args)
+    for rec in refs.records:
+        data.add(models.Bibrec, rec.id, _obj=bibtex2source(rec, cls=models.Bibrec))
 
     for name, props in LANGUAGES.items():
         iso = props['ISO 639-3']
-        gcode, lat, lon = glottolog[iso]
+        if len(iso) == 3:
+            gcode, lat, lon = glottolog[iso]
         lat, lon = props.get('geo', (None, None))
         lang = data.add(
             models.Languoid, name, id=iso, name=props.get(name, name), latitude=lat, longitude=lon)
@@ -174,59 +198,154 @@ def main(args):
             words = parsed_words(words, fp, lang)
             lang = data['Languoid'][lang]
 
-            # let's see if refs are only given for one (the last) word:
-            refs = [w[1] for w in words if w[1] is not None]
-            if len(refs) < 2:
-                # we use one valueset for all words!
+            if lang.id != 'nmn':
                 vs = common.ValueSet(
                     id='%s-%s' % (s.id, lang.id),
                     parameter=s,
-                    language=lang)
-                if refs:
-                    for ref in refs[0]:
-                        ref = list(get_refs(spec['references'][int(ref) - 1]))
-                        for k, ref_ in enumerate(ref):
-                            if isinstance(ref_, basestring):
-                                vs.source = ref_
-                            else:
-                                ref_, pages = ref_
-                                source = data['Bibrec'][ref_]
-                                DBSession.add(common.ValueSetReference(
-                                    valueset=vs, source=source, description=pages))
+                    language=lang,
+                    contribution=contrib)
+                sources = []
+                for ref in chain(*[w[1] for w in words if w[1] is not None]):
+                    ref = list(get_refs(spec['references'][int(ref) - 1]))
+                    for k, ref_ in enumerate(ref):
+                        if isinstance(ref_, basestring):
+                            sources.append(ref_)
+                        else:
+                            ref_, pages = ref_
+                            DBSession.add(common.ValueSetReference(
+                                valueset=vs, source=data['Bibrec'][ref_], description=pages))
+                if sources:
+                    vs.source = '; '.join(sources)
+
             for k, word in enumerate(words):
                 word, _refs, varieties = word
 
+                if lang.id.startswith('nmn'):
+                    if varieties:
+                        assert len(varieties) == 1
+                        varieties = [_v.strip() for _v in varieties[0].split(',')]
+                        if len(varieties) > 1:
+                            #
+                            # TODO: needs to be handled!
+                            #
+                            raise ValueError
+
+                        lang = data['Languoid'][taa_variety_map[varieties[0].strip().lower()]]
+                    vsid = '%s-%s' % (s.id, lang.id)
+                    if vsid in data['ValueSet']:
+                        vs = data['ValueSet'][vsid]
+                    else:
+                        vs = data.add(
+                            common.ValueSet, vsid,
+                            id=vsid,
+                            parameter=s,
+                            language=lang,
+                            contribution=contrib)
+                        sources = []
+                        for ref in chain(*[w[1] for w in words if w[1] is not None and w[2] == varieties]):
+                            ref = list(get_refs(spec['references'][int(ref) - 1]))
+                            for ref_ in ref:
+                                if isinstance(ref_, basestring):
+                                    sources.append(ref_)
+                                else:
+                                    ref_, pages = ref_
+                                    DBSession.add(common.ValueSetReference(
+                                        valueset=vs, source=data['Bibrec'][ref_], description=pages))
+                        if sources:
+                            vs.source = '; '.join(sources)
+
                 id_ = '%s-%s-%s' % (s.id, lang.id, k)
-                if len(refs) >= 2:
-                    vs = common.ValueSet(
-                        id=id_,
-                        contribution=contrib,
-                        parameter=s,
-                        language=lang)
-                    for ref in _refs:
-                        ref = list(get_refs(spec['references'][int(ref) - 1]))
-                        for k, ref_ in enumerate(ref):
-                            if isinstance(ref_, basestring):
-                                vs.source = ref_
-                            else:
-                                ref_, pages = ref_
-                                source = data['Bibrec'][ref_]
-                                DBSession.add(common.ValueSetReference(
-                                    valueset=vs, source=source, description=pages))
                 word.valueset = vs
                 word.id = id_
-                for v_ in varieties:
-                    for v in v_.split(','):
-                        v = v.strip()
-                        try:
-                            word.varieties.append(
-                                data['Variety']['%s-%s' % (lang.id, slug(v))])
-                        except KeyError:
-                            # Papio ursinus
-                            #'Khoekhoegowab': u'\u01c2\xe1\xecd\u0209-\xe0\u01c3\u0151\u1e3fs\xe8.b, \u01c3h\xe0\u0151-kh\xf3m\u0300.mi, \u01c0uisi\u01c2n\xfbu.b (S) [4]'
-                            # undefined variety "S"!
-                            print '#########', s.name
-                            print spec['names']
+                if not lang.id.startswith('nmn'):
+                    for v_ in varieties:
+                        for v in v_.split(','):
+                            v = v.strip()
+                            try:
+                                word.varieties.append(
+                                    data['Variety']['%s-%s' % (lang.id, slug(v))])
+                            except KeyError:
+                                # Papio ursinus
+                                #'Khoekhoegowab': u'\u01c2\xe1\xecd\u0209-\xe0\u01c3\u0151\u1e3fs\xe8.b, \u01c3h\xe0\u0151-kh\xf3m\u0300.mi, \u01c0uisi\u01c2n\xfbu.b (S) [4]'
+                                # undefined variety "S"!
+                                print '#########', s.name
+                                print spec['names']
+
+
+def from_csv(args, model, data, visitor=None, condition=None, **kw):
+    kw.setdefault('delimiter', ',')
+    kw.setdefault('lineterminator', str('\r\n'))
+    kw.setdefault('quotechar', '"')
+    for row in list(reader(args.data_file('dump', model.__csv_name__ + '.csv'), **kw))[1:]:
+        if condition and not condition(row):
+            continue
+        obj = data.add(model, row[0], _obj=model.from_csv(row, data))
+        if visitor:
+            visitor(obj)
+
+
+def main(args):
+    data, contrib, glottolog = get_metadata()
+
+    refs = wiki.get_refs(args)
+    for rec in refs.records:
+        data.add(models.Bibrec, rec.id, _obj=bibtex2source(rec, cls=models.Bibrec))
+
+    from_csv(args, models.Bibrec, data, condition=lambda row: row[0] not in data['Bibrec'])
+
+    for model in [
+        models.Variety,
+        models.Country,
+        models.Category,
+        models.Ecoregion,
+    ]:
+        from_csv(args, model, data)
+
+    def visitor(lang):
+        if lang.id in glottolog:
+            gcode, lat, lon = glottolog[lang.id]
+            #
+            # TODO: add glottocode!
+            #
+
+    from_csv(args, models.Languoid, data, visitor=visitor)
+    from_csv(args, models.Species, data)
+
+    #
+    # TODO: images, words
+    #
+    for image in reader(
+            args.data_file('dump', 'images.csv'),
+            namedtuples=True,
+            delimiter=",",
+            lineterminator='\r\n'
+    ):
+        # id,species_id,name,mime_type,src,width,height,author,date,place,comments,keywords,permission
+        jsondata = dict(width=int(image.width), height=int(image.height))
+        for k in 'src author date place comments keywords permission'.split():
+            v = getattr(image, k)
+            if v:
+                if k == 'permission':
+                    jsondata[k] = json.loads(v)
+                elif k == 'src':
+                    pref = 'https://lingweb.eva.mpg.de'
+                    if v.startswith(pref):
+                        v = v[len(pref):]
+                    jsondata[k] = v
+                else:
+                    jsondata[k] = v
+        f = common.Parameter_files(
+            object=data['Species'][image.species_id],
+            id=image.id,
+            name=image.name,
+            jsondata=jsondata,
+            mime_type=image.mime_type)
+        #
+        # TODO: handle new images!?
+        #
+        #f.create(files_dir, wiki.get(args, img[n]['src'], html=False))
+
+    from_csv(args, models.Word, data)
 
 
 def prime_cache(args):
