@@ -272,6 +272,9 @@ class Ecoregion(Base, IdNameDescriptionMixin, CsvMixin):
             secondary=SpeciesEcoregion.__table__,
             backref=backref('ecoregions', order_by='Ecoregion.id'))
 
+    def wwf_url(self):
+        return 'http://www.worldwildlife.org/ecoregions/' + self.id.lower()
+
 
 class SpeciesCategory(Base):
     species_pk = Column(Integer, ForeignKey('species.pk'))

@@ -93,8 +93,12 @@ def get_metadata():
         publisher_name="Max Planck Institute for Evolutionary Anthropology",
         publisher_place="Leipzig",
         publisher_url="http://www.eva.mpg.de",
-        license="http://creativecommons.org/licenses/by/3.0/",
-        domain='tsammalex.clld.org')
+        domain='tsammalex.clld.org',
+        license='http://creativecommons.org/licenses/by/3.0/',
+        contact='naumann@eva.mpg.de',
+        jsondata={
+            'license_icon': 'cc-by.png',
+            'license_name': 'Creative Commons Attribution 3.0 Unported License'})
     DBSession.add(dataset)
 
     for i, spec in enumerate([('naumann', "Christfried Naumann")]):

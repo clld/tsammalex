@@ -4,6 +4,7 @@ from clld.web.app import get_configurator, menu_item
 
 # we must make sure custom models are known at database initialization!
 from tsammalex import models
+from tsammalex import views
 
 _ = lambda s: s
 _('Parameter')
@@ -22,5 +23,8 @@ def main(global_config, **settings):
         ('dataset', partial(menu_item, 'dataset', label='Home')),
         ('languages', partial(menu_item, 'languages')),
         ('parameters', partial(menu_item, 'parameters')),
+        ('ecoregions', lambda ctx, req: (req.route_url('ecoregions'), 'Ecoregions')),
     )
+    config.add_route_and_view(
+        'ecoregions', '/ecoregions', renderer='ecoregions.mako', view=views.ecoregions)
     return config.make_wsgi_app()

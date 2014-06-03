@@ -1,17 +1,17 @@
 <%inherit file="../home_comp.mako"/>
 
 <%def name="sidebar()">
-    <div class="well">
-        <h3>Sidebar</h3>
-        <p>
-            Content
-        </p>
-    </div>
+    ##<div class="well">
+    ##    <h3>Sidebar</h3>
+    ##    <p>
+    ##        Content
+    ##    </p>
+    ##</div>
 </%def>
 
 <h2>Welcome to Tsammalex</h2>
 
-<p>
+<p class="lead">
     Tsammalex is a multilingual lexical database on plants and animals including an image repository.
     In the current preliminary version (work in progress), it is focused on the Kalahari region of
     Southern Africa. It is meant as a platform for scholars of lexicology in vernacular languages

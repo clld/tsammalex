@@ -5,6 +5,7 @@ from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
 from clld.web.util.helpers import HTML, external_link, linked_references
 from clld.db.util import get_distinct_values
+from clld.db.meta import DBSession
 from clld.db.models.common import Parameter, Value, Language, ValueSet
 
 from tsammalex.models import (
@@ -50,6 +51,12 @@ class CategoryCol(CatCol):
 class EcoregionCol(CatCol):
     __spec__ = ('ecoregions', Ecoregion)
 
+    def __init__(self, *args, **kw):
+        kw['choices'] = [
+            er.name for er in
+            DBSession.query(Ecoregion).join(SpeciesEcoregion).order_by(Ecoregion.id).distinct()]
+        Col.__init__(self, *args, **kw)
+
 
 class SpeciesTable(Parameters):
     def base_query(self, query):
@@ -67,6 +74,9 @@ class SpeciesTable(Parameters):
         return query.distinct()
 
     def col_defs(self):
+        er_col = EcoregionCol(self, 'ecoregions', bSortable=False)
+        if 'er' in self.req.params:
+            er_col.js_args['sFilter'] = self.req.params['er']
         res = Parameters.col_defs(self)[1:]
         res[0].js_args['sTitle'] = 'Species'
         res.append(Col(self, 'description', sTitle='Name')),
@@ -74,7 +84,7 @@ class SpeciesTable(Parameters):
         res.append(Col(self, 'family', model_col=Species.family)),
         res.append(ThumbnailCol(self, 'thumbnail'))
         res.append(CategoryCol(self, 'categories', bSortable=False))
-        res.append(EcoregionCol(self, 'ecoregions', bSortable=False))
+        res.append(er_col)
         res.append(CountryCol(self, 'countries', bSortable=False))
         return res
 
