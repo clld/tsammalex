@@ -3,6 +3,7 @@ from sqlalchemy.orm import aliased, joinedload, joinedload_all
 from clld.web.datatables.base import Col, LinkCol
 from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
+from clld.web.datatables.language import Languages
 from clld.web.util.helpers import HTML, external_link, linked_references
 from clld.db.util import get_distinct_values
 from clld.db.meta import DBSession
@@ -13,6 +14,7 @@ from tsammalex.models import (
     Country, SpeciesCountry,
     Category, SpeciesCategory, Species,
     Word, Variety, WordVariety,
+    Languoid,
 )
 
 
@@ -163,6 +165,13 @@ class Words(Values):
             return {'bPaginate': False}
 
 
+class Languoids(Languages):
+    def col_defs(self):
+        res = Languages.col_defs(self)
+        return res[:2] + [Col(self, 'lineage', model_col=Languoid.lineage)] + res[2:]
+
+
 def includeme(config):
     config.register_datatable('parameters', SpeciesTable)
     config.register_datatable('values', Words)
+    config.register_datatable('languages', Languoids)

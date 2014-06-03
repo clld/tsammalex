@@ -110,14 +110,15 @@ class TsammalexEditor(Editor, CustomModelMixin, CsvMixin):
 @implementer(interfaces.ILanguage)
 class Languoid(Language, CustomModelMixin, CsvMixin):
     __csv_name__ = 'languages'
-    __csv_head__ = ['id', 'name', 'description', 'latitude', 'longitude', 'varieties__ids']
+    __csv_head__ = ['id', 'name', 'lineage', 'description', 'latitude', 'longitude', 'varieties__ids']
 
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
+    lineage = Column(Unicode)
 
     @classmethod
     def from_csv(cls, row, data=None):
         lang = super(Languoid, cls).from_csv(row)
-        for vid in row[5].split(','):
+        for vid in row[6].split(','):
             if vid:
                 lang.varieties.append(data['Variety'][vid])
         return lang

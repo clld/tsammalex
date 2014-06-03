@@ -1,6 +1,7 @@
 from functools import partial
 
-from clld.web.app import get_configurator, menu_item
+from clld import interfaces
+from clld.web.app import get_configurator, menu_item, MapMarker
 
 # we must make sure custom models are known at database initialization!
 from tsammalex import models
@@ -10,11 +11,39 @@ _ = lambda s: s
 _('Parameter')
 _('Parameters')
 
+ICON_MAP = {
+    'Bantu': 'ffff00',
+    'Khoe': '00ffff',
+    'Tuu': '66ff33',
+    "Kx'a": '990099',
+    'Germanic': 'dd0000',
+}
+
+
+class TsammalexMapMarker(MapMarker):
+    def __call__(self, ctx, req):
+        lang = None
+        if interfaces.IValueSet.providedBy(ctx):
+            lang = ctx.language
+
+        if interfaces.IValue.providedBy(ctx):
+            lang = ctx.valueset.language
+
+        if interfaces.ILanguage.providedBy(ctx):
+            lang = ctx
+
+        if lang:
+            icon = ICON_MAP.get(lang.lineage, 'ffff00')
+            return req.static_url('clld:web/static/icons/c%s.png' % icon)
+
+        return super(TsammalexMapMarker, self).__call__(ctx, req)
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
-    config = get_configurator('tsammalex', settings=settings)
+    config = get_configurator(
+        'tsammalex', (TsammalexMapMarker(), interfaces.IMapMarker), settings=settings)
     config.include('clldmpg')
     config.include('tsammalex.datatables')
     config.include('tsammalex.maps')
