@@ -3,7 +3,9 @@
 <%! active_menu_item = "languages" %>
 <%block name="title">${_('Language')} ${ctx.name}</%block>
 
-<div style="float: right; margin-top: 10px;">
+${util.codes()}
+
+<div style="float: right; margin-top: 10;" class="clearfix">
 ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
 </div>
 

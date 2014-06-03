@@ -22,18 +22,21 @@ ICON_MAP = {
 
 class TsammalexMapMarker(MapMarker):
     def __call__(self, ctx, req):
-        lang = None
+        lineage = None
         if interfaces.IValueSet.providedBy(ctx):
-            lang = ctx.language
+            lineage = ctx.language.lineage
 
         if interfaces.IValue.providedBy(ctx):
-            lang = ctx.valueset.language
+            lineage = ctx.valueset.language.lineage
 
         if interfaces.ILanguage.providedBy(ctx):
-            lang = ctx
+            lineage = ctx.lineage
 
-        if lang:
-            icon = ICON_MAP.get(lang.lineage, 'ffff00')
+        if ctx in ICON_MAP:
+            lineage = ctx
+
+        if lineage:
+            icon = ICON_MAP.get(lineage, 'ffff00')
             return req.static_url('clld:web/static/icons/c%s.png' % icon)
 
         return super(TsammalexMapMarker, self).__call__(ctx, req)

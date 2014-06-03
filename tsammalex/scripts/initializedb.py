@@ -8,7 +8,9 @@ from collections import defaultdict
 
 from path import path
 from clld.util import slug
-from clld.scripts.util import initializedb, Data, bibtex2source, glottocodes_by_isocode
+from clld.scripts.util import (
+    initializedb, Data, bibtex2source, glottocodes_by_isocode, add_language_codes,
+)
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib.dsv import reader
@@ -108,9 +110,7 @@ def get_metadata():
             contributor=common.Contributor(id=spec[0], name=spec[1])))
 
     contrib = data.add(common.Contribution, 'tsammalex', name="Tsammalex", id="tsammalex")
-    glottolog = glottocodes_by_isocode(
-        'postgresql://robert@/glottolog3', cols='id latitude longitude'.split())
-    return data, contrib, glottolog
+    return data, contrib, glottocodes_by_isocode('postgresql://robert@/glottolog3')
 
 
 def main(args):
@@ -130,7 +130,7 @@ def main(args):
     for name, props in LANGUAGES.items():
         iso = props['ISO 639-3']
         if len(iso) == 3:
-            gcode, lat, lon = glottolog[iso]
+            gcode = glottolog[iso]
         lat, lon = props.get('geo', (None, None))
         lang = data.add(
             models.Languoid, name, id=iso, name=props.get(name, name), latitude=lat, longitude=lon)
@@ -285,7 +285,7 @@ def from_csv(args, model, data, visitor=None, condition=None, **kw):
             continue
         obj = data.add(model, row[0], _obj=model.from_csv(row, data))
         if visitor:
-            visitor(obj)
+            visitor(obj, data)
 
 
 def main(args):
@@ -305,19 +305,13 @@ def main(args):
     ]:
         from_csv(args, model, data)
 
-    def visitor(lang):
+    def visitor(lang, data):
         if lang.id in glottolog:
-            gcode, lat, lon = glottolog[lang.id]
-            #
-            # TODO: add glottocode!
-            #
+            add_language_codes(data, lang, lang.id, glottolog)
 
     from_csv(args, models.Languoid, data, visitor=visitor)
     from_csv(args, models.Species, data)
 
-    #
-    # TODO: images, words
-    #
     for image in reader(
             args.data_file('dump', 'images.csv'),
             namedtuples=True,
