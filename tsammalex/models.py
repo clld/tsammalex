@@ -22,72 +22,17 @@ from clld.db.models.common import (
 )
 
 
-class CsvMixin(object):
-    #: base name of the csv file
-    __csv_name__ = None
-
-    #: list of field names for the csv file
-    __csv_head__ = ['id', 'name', 'description']
-
-    def value_to_csv(self, attr):
-        """Convert one value to a representation suitable for csv writer.
-
-        :param attr: Name of the attribute from which to convert the value.
-        :return: Object suitable for serialization with csv writer.
-        """
-        rel = None
-        if attr.endswith('__ids') or attr.endswith('__id'):
-            attr = attr.split('__')
-            rel = attr[-1]
-            attr = '__'.join(attr[:-1])
-        try:
-            prop = getattr(self, attr, '')
-        except:
-            print self
-            print attr
-            raise
-        if rel == 'id':
-            return prop.id
-        elif rel == 'ids':
-            return ','.join(o.id for o in prop)
-        return prop
-
-    def to_csv(self):
-        """
-        :return: list of values to be passed to csv.writer.writerow
-        """
-        return [self.value_to_csv(attr) for attr in self.__csv_head__]
-
-    @classmethod
-    def value_from_csv(cls, attr, value):
-        if not value:
-            return None
-        col = getattr(cls, attr)
-        if isinstance(col.property.columns[0].type, Integer):
-            return int(value)
-        if isinstance(col.property.columns[0].type, Float):
-            return float(value.replace(',', '.'))
-        return value
-
-    @classmethod
-    def from_csv(cls, row, data=None):
-        props = {k: cls.value_from_csv(k, row[i]) or None for i, k in enumerate(cls.__csv_head__)
-                 if not (k.endswith('__id') or k.endswith('__ids'))}
-        return cls(**props)
-
-    @classmethod
-    def csv_query(cls, session):
-        return session.query(cls).order_by(getattr(cls, 'id', getattr(cls, 'pk', None)))
-
-
 class WordVariety(Base):
     word_pk = Column(Integer, ForeignKey('word.pk'))
     variety_pk = Column(Integer, ForeignKey('variety.pk'))
 
 
-class Variety(Base, IdNameDescriptionMixin, CsvMixin):
+class Variety(Base, IdNameDescriptionMixin):
     __csv_name__ = 'varieties'
     language_pk = Column(Integer, ForeignKey('language.pk'))
+
+    def csv_head(self):
+        return ['id', 'name', 'description']
 
     @declared_attr
     def language(cls):
@@ -97,23 +42,25 @@ class Variety(Base, IdNameDescriptionMixin, CsvMixin):
 #-----------------------------------------------------------------------------
 # specialized common mapper classes
 #-----------------------------------------------------------------------------
-class TsammalexEditor(Editor, CustomModelMixin, CsvMixin):
+class TsammalexEditor(Editor, CustomModelMixin):
     __csv_name__ = 'editors'
-    __csv_head__ = ['ord', 'name']
-
     pk = Column(Integer, ForeignKey('editor.pk'), primary_key=True)
 
-    def to_csv(self):
+    def csv_head(self):
+        return ['ord', 'name']
+
+    def to_csv(self, ctx=None, req=None, cols=None):
         return [self.ord, self.contributor.name]
 
 
 @implementer(interfaces.ILanguage)
-class Languoid(Language, CustomModelMixin, CsvMixin):
+class Languoid(Language, CustomModelMixin):
     __csv_name__ = 'languages'
-    __csv_head__ = ['id', 'name', 'lineage', 'description', 'latitude', 'longitude', 'varieties__ids']
-
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
     lineage = Column(Unicode)
+
+    def csv_head(self):
+        return ['id', 'name', 'lineage', 'description', 'latitude', 'longitude', 'varieties__ids']
 
     @classmethod
     def from_csv(cls, row, data=None):
@@ -125,27 +72,31 @@ class Languoid(Language, CustomModelMixin, CsvMixin):
 
 
 @implementer(interfaces.ISource)
-class Bibrec(Source, CustomModelMixin, CsvMixin):
+class Bibrec(Source, CustomModelMixin):
     __csv_name__ = 'sources'
     pk = Column(Integer, ForeignKey('source.pk'), primary_key=True)
 
+    def csv_head(self):
+        return ['id', 'name', 'description']
+
 
 @implementer(interfaces.IValue)
-class Word(Value, CustomModelMixin, CsvMixin):
+class Word(Value, CustomModelMixin):
     __csv_name__ = 'words'
-    __csv_head__ = [
-        'id', 'name', 'description', 'phonetic', 'grammatical_info', 'comment',
-        'source__id',
-        'language__id',
-        'varieties__ids',
-        'species__id',
-        'refs__ids']
-
     pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
     phonetic = Column(Unicode)
     grammatical_info = Column(Unicode)
     comment = Column(Unicode)
     varieties = relationship(Variety, secondary=WordVariety.__table__, order_by=Variety.id)
+
+    def csv_head(self):
+        return [
+            'id', 'name', 'description', 'phonetic', 'grammatical_info', 'comment',
+            'source__id',
+            'language__id',
+            'varieties__ids',
+            'species__id',
+            'refs__ids']
 
     @classmethod
     def csv_query(cls, session):
@@ -153,7 +104,7 @@ class Word(Value, CustomModelMixin, CsvMixin):
             .join(ValueSet).join(Language).order_by(Language.id, cls.name)\
             .options(joinedload_all(cls.valueset, ValueSet.language))
 
-    def to_csv(self):
+    def to_csv(self, ctx=None, req=None, cols=None):
         return [
             self.id,
             self.name,
@@ -188,13 +139,16 @@ class Word(Value, CustomModelMixin, CsvMixin):
                 contribution=data['Contribution']['tsammalex'])
             if row[10]:
                 for i, ref in enumerate(row[10].split(';')):
-                    rid, pages = ref.split('[', 1)
-                    try:
-                        assert pages.endswith(']')
-                    except:
-                        print row[10]
-                        raise
-                    pages = pages[:-1]
+                    if '[' in ref:
+                        rid, pages = ref.split('[', 1)
+                        try:
+                            assert pages.endswith(']')
+                        except:
+                            print row[10]
+                            raise
+                        pages = pages[:-1]
+                    else:
+                        rid, pages = ref, None
                     data.add(
                         ValueSetReference, '%s-%s' % (obj.id, i),
                         valueset=vs, source=data['Bibrec'][rid], description=pages or None)
@@ -208,17 +162,18 @@ class Word(Value, CustomModelMixin, CsvMixin):
 
 
 @implementer(interfaces.IParameter)
-class Species(Parameter, CustomModelMixin, CsvMixin):
+class Species(Parameter, CustomModelMixin):
     __csv_name__ = 'species'
-    __csv_head__ = [
-        'id', 'name', 'description', 'family', 'genus', 'wikipedia_url', 'eol_id',
-        'countries__ids', 'categories__ids', 'ecoregions__ids']
-
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
     family = Column(Unicode)
     genus = Column(Unicode)
     eol_id = Column(String)
     wikipedia_url = Column(String)
+
+    def csv_head(self):
+        return [
+            'id', 'name', 'description', 'family', 'genus', 'wikipedia_url', 'eol_id',
+            'countries__ids', 'categories__ids', 'ecoregions__ids']
 
     @reify
     def thumbnail(self):
@@ -234,10 +189,10 @@ class Species(Parameter, CustomModelMixin, CsvMixin):
     @classmethod
     def from_csv(cls, row, data=None):
         obj = super(Species, cls).from_csv(row)
-        for index, model in [(7, 'Country'), (8, 'Category'), (9, 'Ecoregion')]:
+        for index, attr, model in [(7, 'countries', 'Country'), (8, 'categories', 'Category'), (9, 'ecoregions', 'Ecoregion')]:
             for id_ in row[index].split(','):
                 if id_:
-                    coll = getattr(obj, cls.__csv_head__[index].split('__')[0])
+                    coll = getattr(obj, attr)
                     coll.append(data[model][id_])
         return obj
 
@@ -247,8 +202,11 @@ class SpeciesCountry(Base):
     country_pk = Column(Integer, ForeignKey('country.pk'))
 
 
-class Country(Base, IdNameDescriptionMixin, CsvMixin):
+class Country(Base, IdNameDescriptionMixin):
     __csv_name__ = 'countries'
+
+    def csv_head(self):
+        return ['id', 'name', 'description']
 
     @declared_attr
     def species(cls):
@@ -263,8 +221,11 @@ class SpeciesEcoregion(Base):
     ecoregion_pk = Column(Integer, ForeignKey('ecoregion.pk'))
 
 
-class Ecoregion(Base, IdNameDescriptionMixin, CsvMixin):
+class Ecoregion(Base, IdNameDescriptionMixin):
     __csv_name__ = 'ecoregions'
+
+    def csv_head(self):
+        return ['id', 'name', 'description']
 
     @declared_attr
     def species(cls):
@@ -282,8 +243,11 @@ class SpeciesCategory(Base):
     category_pk = Column(Integer, ForeignKey('category.pk'))
 
 
-class Category(Base, IdNameDescriptionMixin, CsvMixin):
+class Category(Base, IdNameDescriptionMixin):
     __csv_name__ = 'categories'
+
+    def csv_head(self):
+        return ['id', 'name', 'description']
 
     @declared_attr
     def species(cls):

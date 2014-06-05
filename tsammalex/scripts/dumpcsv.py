@@ -37,11 +37,12 @@ def main(args):
                         [obj.id, obj.object.id, obj.name, obj.mime_type, 'https://lingweb.eva.mpg.de' + obj.jsondatadict['src']]
                         + [obj.jsondatadict.get(c, '') for c in cols[5:-1]]
                         + [dumps(obj.jsondatadict.get('permission', ''))])
-
             else:
-                writer.writerow(model.__csv_head__)
-                for obj in model.csv_query(DBSession):
-                    writer.writerow(obj.to_csv())
+                for i, obj in enumerate(model.csv_query(DBSession)):
+                    if i == 0:
+                        cols = obj.csv_head()
+                        writer.writerow(cols)
+                    writer.writerow(obj.to_csv(ctx=None, req=None, cols=cols))
 
 
 if __name__ == '__main__':
