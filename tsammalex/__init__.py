@@ -23,6 +23,9 @@ ICON_MAP = {
 class TsammalexMapMarker(MapMarker):
     def __call__(self, ctx, req):
         lineage = None
+        if ctx and isinstance(ctx, (tuple, list)):
+            ctx = ctx[0]
+
         if interfaces.IValueSet.providedBy(ctx):
             lineage = ctx.language.lineage
 
