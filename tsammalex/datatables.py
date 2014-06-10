@@ -1,4 +1,4 @@
-from sqlalchemy.orm import aliased, joinedload, joinedload_all
+from sqlalchemy.orm import joinedload, joinedload_all
 
 from clld.web.datatables.base import Col, LinkCol
 from clld.web.datatables.parameter import Parameters
@@ -56,7 +56,7 @@ class EcoregionCol(CatCol):
     def __init__(self, *args, **kw):
         kw['choices'] = [
             er.name for er in
-            DBSession.query(Ecoregion).join(SpeciesEcoregion).order_by(Ecoregion.id).distinct()]
+            DBSession.query(Ecoregion).join(SpeciesEcoregion).order_by(Ecoregion.id)]
         Col.__init__(self, *args, **kw)
 
 
@@ -105,8 +105,6 @@ class RefsCol(Col):
                         label = t
                         break
                 lis.append(external_link(s, label))
-            else:
-                lis.append(s)
         lis.append(linked_references(self.dt.req, item.valueset))
         return HTML.ul(*lis, class_='unstyled')
 
@@ -156,7 +154,9 @@ class Words(Values):
             res.append(Col(self, 'phonetic', model_col=Word.phonetic))
             res.append(Col(self, 'grammatical_info', model_col=Word.grammatical_info))
             if self.language.varieties:
-                res.append(VarietiesCol(self, 'variety', choices=[(v.pk, v.name) for v in self.language.varieties]))
+                res.append(VarietiesCol(
+                    self, 'variety',
+                    choices=[(v.pk, v.name) for v in self.language.varieties]))
         res.append(RefsCol(self, 'references'))
         return res
 

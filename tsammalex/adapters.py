@@ -6,7 +6,7 @@ from docx.shared import Inches
 
 from sqlalchemy.orm import joinedload
 from clld.db.meta import DBSession
-from clld.db.models.common import Language, ValueSet
+from clld.db.models.common import ValueSet
 from clld.web.adapters.geojson import GeoJsonParameter
 from clld.web.adapters.base import Representation
 from clld.interfaces import IParameter, ILanguage
@@ -34,7 +34,7 @@ class Docx(Representation):
     extension = 'docx'
 
     def write(self, ctx, req, doc):
-        return doc
+        raise NotImplemented  # pragma: no cover
 
     def render(self, ctx, req):
         document = Document()
@@ -59,11 +59,6 @@ class LanguageDocx(Docx):
             table.cell(i + 1, 0).text = vs.parameter.name
             table.cell(i + 1, 1).text = ', '.join(v.name for v in vs.values)
 
-        #for f in filter(
-        #        lambda f_: f_.name.startswith('small') or f_.name.startswith('large'),
-        #        ctx._files):
-        #    document.add_picture(req.file_ospath(f), width=Inches(2.5))
-
 
 class SpeciesDocx(Docx):
     def write(self, ctx, req, document):
@@ -80,7 +75,6 @@ class SpeciesDocx(Docx):
                 lambda f_: f_.name.startswith('small') or f_.name.startswith('large'),
                 ctx._files):
             p = req.registry.settings['clld.files'].joinpath(f.relpath)
-            #p = req.file_ospath(f)
             document.add_picture(p, width=Inches(3.5))
 
             table = document.add_table(rows=0, cols=2)

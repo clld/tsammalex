@@ -4,20 +4,16 @@ from sqlalchemy import (
     String,
     Unicode,
     Integer,
-    Boolean,
-    Float,
     ForeignKey,
-    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship, backref, joinedload_all
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.ext.hybrid import hybrid_property
 from pyramid.decorator import reify
 
 from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
-    Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Dataset, Editor,
+    Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
     ValueSetReference,
 )
 
@@ -39,9 +35,9 @@ class Variety(Base, IdNameDescriptionMixin):
         return relationship(Language, backref=backref('varieties', order_by='Variety.id'))
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # specialized common mapper classes
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 class TsammalexEditor(Editor, CustomModelMixin):
     __csv_name__ = 'editors'
     pk = Column(Integer, ForeignKey('editor.pk'), primary_key=True)
@@ -52,6 +48,10 @@ class TsammalexEditor(Editor, CustomModelMixin):
     def to_csv(self, ctx=None, req=None, cols=None):
         return [self.ord, self.contributor.name]
 
+    @classmethod
+    def from_csv(cls, row, data=None):
+        return cls(ord=int(row[0] or 1), contributor=data['TsammalexEditor'][row[1]])
+
 
 @implementer(interfaces.ILanguage)
 class Languoid(Language, CustomModelMixin):
@@ -60,7 +60,14 @@ class Languoid(Language, CustomModelMixin):
     lineage = Column(Unicode)
 
     def csv_head(self):
-        return ['id', 'name', 'lineage', 'description', 'latitude', 'longitude', 'varieties__ids']
+        return [
+            'id',
+            'name',
+            'lineage',
+            'description',
+            'latitude',
+            'longitude',
+            'varieties__ids']
 
     @classmethod
     def from_csv(cls, row, data=None):
@@ -87,11 +94,17 @@ class Word(Value, CustomModelMixin):
     phonetic = Column(Unicode)
     grammatical_info = Column(Unicode)
     comment = Column(Unicode)
-    varieties = relationship(Variety, secondary=WordVariety.__table__, order_by=Variety.id)
+    varieties = relationship(
+        Variety, secondary=WordVariety.__table__, order_by=Variety.id)
 
     def csv_head(self):
         return [
-            'id', 'name', 'description', 'phonetic', 'grammatical_info', 'comment',
+            'id',
+            'name',
+            'description',
+            'phonetic',
+            'grammatical_info',
+            'comment',
             'source__id',
             'language__id',
             'varieties__ids',
@@ -116,7 +129,9 @@ class Word(Value, CustomModelMixin):
             self.valueset.language.id,
             self.value_to_csv('varieties__ids'),
             self.valueset.parameter.id,
-            ';'.join('%s[%s]' % (r.source.id, r.description or '') for r in self.valueset.references),
+            ';'.join(
+                '%s[%s]' % (r.source.id, r.description or '')
+                for r in self.valueset.references),
         ]
 
     @classmethod
@@ -151,7 +166,9 @@ class Word(Value, CustomModelMixin):
                         rid, pages = ref, None
                     data.add(
                         ValueSetReference, '%s-%s' % (obj.id, i),
-                        valueset=vs, source=data['Bibrec'][rid], description=pages or None)
+                        valueset=vs,
+                        source=data['Bibrec'][rid],
+                        description=pages or None)
         obj.valueset = vs
 
         if row[8]:
@@ -172,8 +189,16 @@ class Species(Parameter, CustomModelMixin):
 
     def csv_head(self):
         return [
-            'id', 'name', 'description', 'family', 'genus', 'wikipedia_url', 'eol_id',
-            'countries__ids', 'categories__ids', 'ecoregions__ids']
+            'id',
+            'name',
+            'description',
+            'family',
+            'genus',
+            'wikipedia_url',
+            'eol_id',
+            'countries__ids',
+            'categories__ids',
+            'ecoregions__ids']
 
     @reify
     def thumbnail(self):
@@ -189,7 +214,11 @@ class Species(Parameter, CustomModelMixin):
     @classmethod
     def from_csv(cls, row, data=None):
         obj = super(Species, cls).from_csv(row)
-        for index, attr, model in [(7, 'countries', 'Country'), (8, 'categories', 'Category'), (9, 'ecoregions', 'Ecoregion')]:
+        for index, attr, model in [
+            (7, 'countries', 'Country'),
+            (8, 'categories', 'Category'),
+            (9, 'ecoregions', 'Ecoregion')
+        ]:
             for id_ in row[index].split(','):
                 if id_:
                     coll = getattr(obj, attr)

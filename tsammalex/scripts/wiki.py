@@ -1,4 +1,5 @@
 # coding: utf8
+# pragma: no cover
 import json
 import re
 from base64 import urlsafe_b64decode, urlsafe_b64encode

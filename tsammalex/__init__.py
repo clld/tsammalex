@@ -5,6 +5,7 @@ from clld.web.app import get_configurator, menu_item, MapMarker
 
 # we must make sure custom models are known at database initialization!
 from tsammalex import models
+assert models
 from tsammalex import views
 
 _ = lambda s: s
@@ -26,12 +27,6 @@ class TsammalexMapMarker(MapMarker):
         if ctx and isinstance(ctx, (tuple, list)):
             ctx = ctx[0]
 
-        if interfaces.IValueSet.providedBy(ctx):
-            lineage = ctx.language.lineage
-
-        if interfaces.IValue.providedBy(ctx):
-            lineage = ctx.valueset.language.lineage
-
         if interfaces.ILanguage.providedBy(ctx):
             lineage = ctx.lineage
 
@@ -42,7 +37,7 @@ class TsammalexMapMarker(MapMarker):
             icon = ICON_MAP.get(lineage, 'ffff00')
             return req.static_url('clld:web/static/icons/c%s.png' % icon)
 
-        return super(TsammalexMapMarker, self).__call__(ctx, req)
+        return super(TsammalexMapMarker, self).__call__(ctx, req)  # pragma: no cover
 
 
 def main(global_config, **settings):
