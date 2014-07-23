@@ -4,6 +4,8 @@ from clld.db.meta import DBSession
 
 
 class Tests(TestWithEnv):
+    __with_custom_language__ = False
+
     def test_Word(self):
         from tsammalex.models import Word, Variety, Bibrec
 
@@ -15,7 +17,7 @@ class Tests(TestWithEnv):
         vs.parameter = common.Parameter(id='p')
         vs.language = common.Language(id='l')
         data = Data(
-            ValueSet=dict(vs=vs),
+            ValueSet={},
             Languoid=dict(l=vs.language),
             Species=dict(p=vs.parameter),
             Contribution=dict(tsammalex=common.Contribution(id='c')),
@@ -27,7 +29,12 @@ class Tests(TestWithEnv):
         self.assertEquals(l2.id, l.id)
         row[8] = 'ngh-e'
         row[10] = 'picker2002[12]'
-        l2 = Word.from_csv(row, data=data)
+        Word.from_csv(row, data=data)
+        row[10] = 'picker2002'
+        Word.from_csv(row, data=data)
+        data['ValueSet'] = {'p-l': vs}
+        Word.from_csv(row, data=data)
+        self.assert_(list(Word.csv_query(DBSession)))
 
     def test_Variety(self):
         from tsammalex.models import Variety
@@ -62,16 +69,24 @@ class Tests(TestWithEnv):
             for i, obj in enumerate(DBSession.query(cls)):
                 data[cls.mapper_name()][obj.id] = obj
             row.append(','.join(data[cls.mapper_name()].keys()))
-        s = Species.from_csv(row, data=data)
+        Species.from_csv(row, data=data)
 
     def test_Languoid(self):
-        from tsammalex.models import Languoid
+        from tsammalex.models import Languoid, Variety
 
         l = Languoid(id='l', latitude=23.3)
+        v = Variety(id='v')
+        l.varieties.append(v)
         row = l.to_csv()
-        l2 = Languoid.from_csv(row)
+        l2 = Languoid.from_csv(row, data=dict(Variety=dict(v=v)))
         self.assertEquals(l2.id, l.id)
         self.assertAlmostEqual(l.latitude, l2.latitude)
+
+    def test_Bibrec(self):
+        from tsammalex.models import Bibrec
+
+        rec = Bibrec(id='b')
+        Bibrec.from_csv(rec.to_csv())
 
     def test_misc(self):
         from tsammalex.models import Category, Ecoregion, Country

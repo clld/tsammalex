@@ -1,18 +1,7 @@
-import re 
+from __future__ import print_function
+import re
 
 from clld.util import slug
-
-
-"""
-DOBES
-DoBeS
-DoBeS
-ongoing DoBeS project
-DoBeS project
-DoBeS
-Cunningham ed.
-DoBeS
-"""
 
 
 KEY_MAP = {
@@ -31,8 +20,12 @@ SEP = re.compile(r'(?:[^,(]|\([^)]*\))+')
 
 
 def get_refs(line):
-    line = line.strip().replace('|Wikipedia', '').replace(',|', ',').replace(' (ed.)', ' ed.').replace(':,77', ':77,')
-    if '(' in line and not ')' in line:
+    line = line.strip()\
+        .replace('|Wikipedia', '')\
+        .replace(',|', ',')\
+        .replace(' (ed.)', ' ed.')\
+        .replace(':,77', ':77,')
+    if '(' in line and ')' not in line:
         line = line + ')'
     for piece in SEP.findall(line):
         piece = piece.strip()
@@ -46,7 +39,7 @@ def get_refs(line):
             elif piece == 'Cunningham ed.':
                 yield ('cunningham', None)
             else:
-                print piece
+                print(piece)
                 raise ValueError
             continue
         assert len(piece.split('(')) == 2
@@ -55,11 +48,11 @@ def get_refs(line):
         year_pages = piece.split('(')[1].split(')')[0]
         m = YEAR_PAGES.match(year_pages)
         if not m:
-             if year_pages == '?:15':
-                 pages = '15'
-             assert year_pages in ['?:15', '1994:']
+            if year_pages == '?:15':
+                pages = '15'
+            assert year_pages in ['?:15', '1994:']
         else:
-             pages = m.group('pages')
+            pages = m.group('pages')
         if ':' in piece:
             r = piece.split(':')[0]
         else:
@@ -75,9 +68,5 @@ if __name__ == '__main__':
         refs[line.strip()] = list(get_refs(line))
 
     for k, v in refs.items():
-        print k
-        print v
-
-    #for r in sorted(refs.keys()):
-    #    print r
-
+        print(k)
+        print(v)

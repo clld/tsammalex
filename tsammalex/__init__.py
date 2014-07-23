@@ -1,50 +1,40 @@
 from functools import partial
 
-from clld import interfaces
+from clld.interfaces import ILanguage, IMapMarker
 from clld.web.app import get_configurator, menu_item, MapMarker
+from clld.web.adapters.base import adapter_factory, Index
 
 # we must make sure custom models are known at database initialization!
 from tsammalex import models
-assert models
 from tsammalex import views
+from tsammalex.interfaces import IEcoregion
 
 _ = lambda s: s
 _('Parameter')
 _('Parameters')
 
-ICON_MAP = {
-    'Bantu': 'ffff00',
-    'Khoe': '00ffff',
-    'Tuu': '66ff33',
-    "Kx'a": '990099',
-    'Germanic': 'dd0000',
-}
-
 
 class TsammalexMapMarker(MapMarker):
-    def __call__(self, ctx, req):
+    def get_icon(self, ctx, req):
         lineage = None
         if ctx and isinstance(ctx, (tuple, list)):
             ctx = ctx[0]
 
-        if interfaces.ILanguage.providedBy(ctx):
+        if ILanguage.providedBy(ctx):
             lineage = ctx.lineage
 
-        if ctx in ICON_MAP:
+        if ctx in models.ICON_MAP:
             lineage = ctx
 
         if lineage:
-            icon = ICON_MAP.get(lineage, 'ffff00')
-            return req.static_url('clld:web/static/icons/c%s.png' % icon)
-
-        return super(TsammalexMapMarker, self).__call__(ctx, req)  # pragma: no cover
+            return 'c' + models.ICON_MAP.get(lineage, 'ffff00')
 
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
     config = get_configurator(
-        'tsammalex', (TsammalexMapMarker(), interfaces.IMapMarker), settings=settings)
+        'tsammalex', (TsammalexMapMarker(), IMapMarker), settings=settings)
     config.include('clldmpg')
     config.include('tsammalex.datatables')
     config.include('tsammalex.maps')
@@ -55,6 +45,12 @@ def main(global_config, **settings):
         ('parameters', partial(menu_item, 'parameters')),
         ('ecoregions', lambda ctx, req: (req.route_url('ecoregions'), 'Ecoregions')),
     )
-    config.add_route_and_view(
-        'ecoregions', '/ecoregions', renderer='ecoregions.mako', view=views.ecoregions)
+    config.register_resource('ecoregion', models.Ecoregion, IEcoregion, with_index=True)
+    config.register_adapter(
+        adapter_factory('ecoregion/detail_html.mako'), IEcoregion)
+    config.register_adapter(
+        adapter_factory('ecoregion/index_html.mako', base=Index), IEcoregion)
+
+    #config.add_route_and_view(
+    #    'ecoregions', '/ecoregions', renderer='ecoregions.mako', view=views.ecoregions)
     return config.make_wsgi_app()

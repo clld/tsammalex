@@ -3,6 +3,10 @@
 <%! active_menu_item = "parameters" %>
 <%block name="title">${_('Parameter')} ${ctx.name} (${ctx.description})</%block>
 
+##<%block name="head">
+##<script src="${request.static_url('tsammalex:static/wwf_terr_ecos_at.json')}"> </script>
+##</%block>
+
 % if ctx.family or ctx.genus:
 <ul class="breadcrumb">
     % if ctx.family:
@@ -82,4 +86,3 @@ ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
 </div>
     <hr/>
 % endfor
-

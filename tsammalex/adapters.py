@@ -1,29 +1,37 @@
 from cStringIO import StringIO
-from itertools import chain, groupby
+from itertools import chain
 
 from docx import Document
 from docx.shared import Inches
 
-from sqlalchemy.orm import joinedload
-from clld.db.meta import DBSession
-from clld.db.models.common import ValueSet
-from clld.web.adapters.geojson import GeoJsonParameter
+from clld.web.adapters.geojson import GeoJsonParameterMultipleValueSets, GeoJson
 from clld.web.adapters.base import Representation
-from clld.interfaces import IParameter, ILanguage
+from clld.interfaces import IParameter, ILanguage, IIndex
+
+from tsammalex.interfaces import IEcoregion
 
 
-class GeoJsonSpecies(GeoJsonParameter):
-    def feature_iterator(self, ctx, req):
-        return groupby(
-            DBSession.query(ValueSet)
-            .filter(ValueSet.parameter_pk == ctx.pk)
-            .order_by(ValueSet.language_pk)
-            .options(joinedload(ValueSet.language)),
-            lambda vs: vs.language)
+class GeoJsonEcoregions(GeoJson):
+    def featurecollection_properties(self, ctx, req):
+        return {'name': "WWF's Terrestrial Ecoregions of the Afrotropics"}
 
-    def get_language(self, ctx, req, p):
-        return p[0]
+    def get_features(self, ctx, req):
+        for ecoregion in ctx.get_query():
+            for polygon in ecoregion.jsondatadict['polygons']:
+                yield {
+                    'type': 'Feature',
+                    'properties': {
+                        'id': ecoregion.id,
+                        'label': '%s %s' % (ecoregion.id, ecoregion.name),
+                        'color': ecoregion.biome.description,
+                        'language': {'id': ecoregion.id},
+                        'latlng': [ecoregion.latitude, ecoregion.longitude],
+                    },
+                    'geometry': polygon,
+                }
 
+
+class GeoJsonSpecies(GeoJsonParameterMultipleValueSets):
     def feature_properties(self, ctx, req, p):
         return {
             'label': ', '.join(v.name for v in chain(*[vs.values for vs in p[1]]))}
@@ -122,4 +130,5 @@ class SpeciesDocx(Docx):
 def includeme(config):
     config.register_adapter(LanguageDocx, ILanguage)
     config.register_adapter(SpeciesDocx, IParameter)
+    config.register_adapter(GeoJsonEcoregions, IEcoregion, IIndex)
     config.register_adapter(GeoJsonSpecies, IParameter)

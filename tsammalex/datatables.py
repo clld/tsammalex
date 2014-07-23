@@ -1,16 +1,18 @@
 from sqlalchemy.orm import joinedload, joinedload_all
+from sqlalchemy.sql.expression import cast
+from sqlalchemy import Integer
 
-from clld.web.datatables.base import Col, LinkCol
+from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
 from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
 from clld.web.datatables.language import Languages
-from clld.web.util.helpers import HTML, external_link, linked_references
-from clld.db.util import get_distinct_values
+from clld.web.util.helpers import HTML, external_link, linked_references, button, icon
+from clld.db.util import get_distinct_values, as_int
 from clld.db.meta import DBSession
 from clld.db.models.common import Parameter, Value, Language, ValueSet
 
 from tsammalex.models import (
-    Ecoregion, SpeciesEcoregion,
+    Ecoregion, SpeciesEcoregion, Biome,
     Country, SpeciesCountry,
     Category, SpeciesCategory, Species,
     Word, Variety, WordVariety,
@@ -171,7 +173,59 @@ class Languoids(Languages):
         return res[:2] + [Col(self, 'lineage', model_col=Languoid.lineage)] + res[2:]
 
 
+class BiomeCol(Col):
+    def __init__(self, dt, name, **kw):
+        kw['choices'] = DBSession.query(Biome.id, Biome.name)\
+            .order_by(as_int(Biome.id))
+        Col.__init__(self, dt, name, **kw)
+
+    def search(self, qs):
+        return Biome.id == qs
+
+    def order(self):
+        return as_int(Biome.id)
+
+    def format(self, item):
+        return item.biome.name
+
+
+class LinkToMapCol(Col):
+    __kw__ = dict(bSearchable=False, bSortable=False)
+
+    def format(self, item):
+        return button(
+            icon('globe'),
+            href="#map",
+            onclick=
+            'TSAMMALEX.highlightEcoregion(CLLD.Maps.map.marker_map.' + item.id + ')')
+
+
+class Ecoregions(DataTable):
+    def base_query(self, query):
+        return query\
+            .join(Ecoregion.biome)\
+            .filter(Ecoregion.realm == 'Afrotropics')\
+            .options(joinedload(Ecoregion.biome), joinedload(Ecoregion.species))
+
+    def col_defs(self):
+        return [
+            IdCol(self, 'id', sTitle='Code'),
+            LinkCol(self, 'name'),
+            BiomeCol(self, 'category'),
+            Col(self, 'status',
+                sDescription=Ecoregion.gbl_stat.doc,
+                model_col=Ecoregion.gbl_stat,
+                choices=get_distinct_values(Ecoregion.gbl_stat)),
+            LinkToMapCol(self, 'm', sTitle=''),
+            Col(self, 'w', sTitle='', format=lambda i: external_link(i.wwf_url(), 'WWF'))
+        ]
+
+    def get_options(self):
+        return {'iDisplayLength': 200, 'bPaginate': False}
+
+
 def includeme(config):
     config.register_datatable('parameters', SpeciesTable)
     config.register_datatable('values', Words)
     config.register_datatable('languages', Languoids)
+    config.register_datatable('ecoregions', Ecoregions)

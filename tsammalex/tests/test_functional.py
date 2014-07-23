@@ -12,7 +12,10 @@ class Tests(TestWithApp):
 
     def test_home(self):
         self.app.get('/', status=200)
+        self.app.get_html('/ecoregions/AT0101')
         self.app.get_html('/ecoregions')
+        self.app.get_dt('/ecoregions')
+        self.app.get_json('/ecoregions.geojson')
         self.app.get_dt('/parameters')
         self.app.get_dt('/parameters?er=a&sSearch_6=a')
         self.app.get_html('/parameters/pantheraleo')

@@ -1,6 +1,6 @@
 # coding: utf8
 # pragma: no cover
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function, absolute_import, division
 import re
 from itertools import chain
 from collections import defaultdict
@@ -8,6 +8,7 @@ from collections import defaultdict
 from clld.scripts.util import parsed_args
 from clld.db.meta import DBSession
 from clld.db.models.common import Value
+from clld.util import nfilter
 
 from tsammalex.models import Word
 
@@ -55,37 +56,8 @@ def split_words(s):
     if chunk:
         yield chunk
 
-    #ref = re.compile('\[(?P<refid>[0-9]+)\]$')
-    #    m = ref.search(word.strip())
-    #    if m:
-    #        yield (word[:m.start()].strip(), int(m.group('refid')) - 1)
-    #    else:
-    #        yield (word.strip(), None)
-
 
 def parsed_word(words, i, fp, lang):
-    """
-(tarentaal, drafhoender, wildehoender, poelpetaat, poelpetater) [1]	(tarentaal, drafhoender, wildehoender, poelpetaat, poelpetater)	tarentaal, drafhoender, wildehoender, poelpetaat, poelpetater  «guineafowl» ((VARIANTS, UNDERSPECIFICATION))
-ǃnà̰ ǀè 'ʘnàje (3ii/3ii)(E) [1]	ǃnà̰ ǀè 'ʘnàje	ǃnà̰ ǀè 'ʘnàje  ((CORRECT: apostrophe as letter symbol))
-ǂxùá (3ii/?) (E)	ǂxùá (3ii/?)	ǂxùá {3ii/?} ((NOUN CLASS IN PLURAL UNKNOWN))
-ǁ(q)áā [11]	ǁ(q)áā	ǁqáā, ǁáā ((VARIANTS))
-tsàhnà (2ii/2ii) 'polecat'? (N)	tsàhnà  'polecat'?	tsàhnà  «polecat» (?) ((OTHER COMMENT: unknown)
- nǀa(h)lise (3ii/4)?	nǀa(h)lise ?	nǀahlise, nǀalise (?) ((VARIANTS; UNKNOWN))
- maxoxo (3ii/?) (C)	maxoxo (3ii/?)	maxoxo {3ii/?} ((NOUN CLASS IN PLURAL UNKNOWN))
-ǂàhà ǀ(')à(q)à (2ii/2ii) (W)	ǂàhà ǀ(')à(q)à	ǂàhà ǀ'àqà, ǂàhà ǀàà (?) ((VARIANTS; UNKNOWN))
-ǃqàq(')ēm [12]	ǃqàq(')ēm	ǃqàq'ēm, ǃqàqēm ((VARIANTS))
-ǂqùe 'nâ̰n (2ii/2ii)	ǂqùe 'nâ̰n	ǂqùe 'nâ̰n ((CORRECT: apostrophe as letter symbol))
-nǀùùn (1~3ii/?) (C)	nǀùùn (1~3ii/?)	nǀùùn {1/?), {3ii/?) (GRAMMATICAL INFORMATION: 2 VARIANTS, UNKNOWN))
-ǁ'm̄ (ǁ'óm) (n1) [11]	ǁ'm̄ (ǁ'óm)	ǁ'm̄, ǁ'óm ((VARIANTS))
-ǃ'àa-ǃ'àa-sè (fruit) (3ii/3ii) (E) [4]	ǃ'àa-ǃ'àa-sè (fruit)	ǃ'àa-ǃ'àa-sè (fruit) ((CORRECT: apostrophe as letter symbol))
-ǁqhama [ǁqhɑmɑ] 'aardvark' (cf. jao, jaqo, ǃoo 'hole') [5]	ǁqhama  'aardvark' (cf. jao, jaqo, ǃoo 'hole')	ǁqhama  'aardvark' (cf. jao, jaqo, ǃoo «hole») ((OTHER COMMENT))
- ǀgài̋o.b(/s)	ǀgài̋o.b(/s)	ǀgài̋o.b, ǀgài̋o.s ((VARIANTS))
-dz(h)òhè (3i/2i) (W, N)	dz(h)òhè	dzhòhè, dzòhè, dzhòè (?)((VARIANTS; UNKNOWN))
-ǀqx'á(y)è (3i/2i) (E, C, S) [7]	ǀqx'á(y)è	ǀqx'áyè, ǀqx'áè (VARIANTS)
-"""
-    #
-    # TODO: correct input following the corrections sent by christfried.
-    #
     word = words[i]
     if word == "cf. phágê (di-) 'black-footed cat' (Felis nigripes) [8]":
         return
@@ -135,7 +107,7 @@ dz(h)òhè (3i/2i) (W, N)	dz(h)òhè	dzhòhè, dzòhè, dzhòè (?)((VARIANTS; U
         n = "'".join(parts[:-2])
     if '(' in n or '[' in n or re.search("\s+'", n):
         if lang != 'Setswana':
-            print word, '-----', n
+            print(word, '-----', n)
         fp.write(('%s\t%s\t%s\n' % (word, n, n)).encode('utf8'))
 
     if lang != 'Taa':
@@ -196,11 +168,10 @@ def parsed_words(words, fp, lang):
     ]:
         words = words.replace(s, t)
     words = list(split_words(words))
-    return filter(None, chain(*[parsed_word(words, i, fp, lang) for i in range(len(words))]))
+    return nfilter(chain(*[parsed_word(words, i, fp, lang) for i in range(len(words))]))
 
 
 def main(args):
-    # TODO: split off 'genus:', get translations for genus!
     u = 0
     for i, v in enumerate(DBSession.query(Value)):
         n = v.name.strip()
@@ -208,13 +179,12 @@ def main(args):
             for _, p in PATTERNS.items():
                 n = p.sub('', n)
             if '(' in n:
-                #print n
                 u += 1
         n = n.strip()
         if n.endswith("'"):
             parts = n.split("'")
-            print n, '--->', parts[-2]
-    print u, 'of', i, 'stuff in (...) unmatched'
+            print(n, '--->', parts[-2])
+    print(u, 'of', i, 'stuff in (...) unmatched')
 
 
 if __name__ == '__main__':

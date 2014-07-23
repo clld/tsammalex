@@ -16,7 +16,6 @@ def main(args):
         TsammalexEditor,
         ('images', Parameter_files),
         Country,
-        Ecoregion,
         Category,
         Variety,
         Languoid,
