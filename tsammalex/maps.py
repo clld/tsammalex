@@ -1,18 +1,15 @@
 from clld.web.maps import ParameterMap, Map, Legend, Layer
 from clld.web.util.htmllib import HTML, literal
-from clld.web.util.helpers import map_marker_img
+from clld.web.util.helpers import JS
 from clld.db.meta import DBSession
-from clld.db.util import as_int
+from clld.db.util import as_int, get_distinct_values
 
-from tsammalex.models import ICON_MAP, Biome
+from tsammalex.models import Biome, Languoid
 
 
 class SpeciesMap(ParameterMap):
     def get_options(self):
-        return {
-            'sidebar': True, 'show_labels': True,
-            #'on_init': JS('TSAMMALEX.ecoregions')
-        }
+        return {'sidebar': True, 'show_labels': True}
 
 
 class LanguoidMap(Map):
@@ -20,15 +17,30 @@ class LanguoidMap(Map):
         return {'show_labels': True, 'icon_size': 20, 'max_zoom': 8}
 
     def get_legends(self):
-        def value_li(lineage):
+        def li(label, checked=False):
+            input_attrs = dict(
+                type='radio',
+                class_='stay-open lineage inline',
+                name='lineage',
+                value=label,
+                onclick=JS("TSAMMALEX.toggle_languages")(self.eid))
+            if checked:
+                input_attrs['checked'] = 'checked'
             return HTML.label(
-                map_marker_img(self.req, lineage),
-                literal(lineage),
-                style='margin-left: 1em; margin-right: 1em;')
+                HTML.input(**input_attrs),
+                ' ',
+                label,
+                class_='stay-open',
+                style="margin-left:5px; margin-right:5px;",
+            )
 
-        yield Legend(self, 'lineages', map(value_li, ICON_MAP.keys()), label='Legend')
+        items = [li('--any--', checked=True)]
+        for l in get_distinct_values(Languoid.lineage):
+            items.append(li(l))
 
-        for legend in Map.get_legends(self):
+        yield Legend(self, 'lineage', items, stay_open=True)
+
+        for legend in super(LanguoidMap, self).get_legends():
             yield legend
 
 
@@ -56,8 +68,8 @@ class EcoregionsMap(Map):
                 HTML.label(
                     HTML.span(
                         literal('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'),
-                        style='background-color: #%s; border: 1px solid black; margin-right: 1em; opacity: 0.5;'
-                              % biome.description),
+                        style='background-color: #%s;' % biome.description,
+                        class_='biome-color'),
                     literal(biome.name),
                     style='margin-left: 1em; margin-right: 1em;'))
         yield Legend(self, 'categories', items)

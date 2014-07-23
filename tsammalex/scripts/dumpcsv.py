@@ -1,12 +1,12 @@
 from json import dumps
 
 from clld.scripts.util import parsed_args
-from clld.lib.dsv import UnicodeCsvWriter
+from clld.lib.dsv import UnicodeWriter
 from clld.db.meta import DBSession
 from clld.db.models.common import Parameter_files
 
 from tsammalex.models import (
-    Languoid, Word, Species, Variety, Country, Ecoregion, Category, Bibrec,
+    Languoid, Word, Species, Variety, Country, Category, Bibrec,
     TsammalexEditor,
 )
 
@@ -28,7 +28,7 @@ def main(args):
         else:
             name = model.__csv_name__
         with open(args.data_file('dump', name + '.csv'), 'w') as fp:
-            writer = UnicodeCsvWriter(fp)
+            writer = UnicodeWriter(fp)
 
             if name == 'images':
                 cols = [

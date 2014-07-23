@@ -38,7 +38,9 @@ def get_metadata():
             'license_name': 'Creative Commons Attribution 3.0 Unported License'})
     DBSession.add(dataset)
 
-    for i, spec in enumerate([('naumann', "Christfried Naumann")]):
+    for i, spec in enumerate([
+            ('naumann', "Christfried Naumann"),
+            ('forkel', 'Robert Forkel')]):
         DBSession.add(common.Editor(
             dataset=dataset,
             ord=i + 1,
@@ -112,16 +114,12 @@ def main(args):
         centroid = (None, None)
         f = sorted(features, key=lambda _f: _f['properties']['AREA'])[-1]
         if f['geometry']:
-            try:
-                coords = f['geometry']['coordinates'][0]
-                if f['geometry']['type'] == 'MultiPolygon':
-                    coords = coords[0]
-                centroid = get_center(coords)
-            except:
-                print(f)
-                raise
+            coords = f['geometry']['coordinates'][0]
+            if f['geometry']['type'] == 'MultiPolygon':
+                coords = coords[0]
+            centroid = get_center(coords)
 
-        polygons = nfilter([f['geometry'] for f in features])
+        polygons = nfilter([_f['geometry'] for _f in features])
         data.add(
             models.Ecoregion, eco_code,
             id=eco_code,

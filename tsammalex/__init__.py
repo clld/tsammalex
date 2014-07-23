@@ -6,7 +6,6 @@ from clld.web.adapters.base import adapter_factory, Index
 
 # we must make sure custom models are known at database initialization!
 from tsammalex import models
-from tsammalex import views
 from tsammalex.interfaces import IEcoregion
 
 _ = lambda s: s
@@ -51,6 +50,4 @@ def main(global_config, **settings):
     config.register_adapter(
         adapter_factory('ecoregion/index_html.mako', base=Index), IEcoregion)
 
-    #config.add_route_and_view(
-    #    'ecoregions', '/ecoregions', renderer='ecoregions.mako', view=views.ecoregions)
     return config.make_wsgi_app()

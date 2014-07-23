@@ -1,6 +1,5 @@
+# coding: utf8
 from sqlalchemy.orm import joinedload, joinedload_all
-from sqlalchemy.sql.expression import cast
-from sqlalchemy import Integer
 
 from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
 from clld.web.datatables.parameter import Parameters
@@ -83,9 +82,12 @@ class SpeciesTable(Parameters):
             er_col.js_args['sFilter'] = self.req.params['er']
         res = Parameters.col_defs(self)[1:]
         res[0].js_args['sTitle'] = 'Species'
-        res.append(Col(self, 'description', sTitle='Name')),
-        res.append(Col(self, 'genus', model_col=Species.genus)),
-        res.append(Col(self, 'family', model_col=Species.family)),
+        res.append(Col(self, 'description', sTitle='English name')),
+        res.append(
+            Col(self, 'genus', model_col=Species.genus, sTitle='Basic term (Eng)')),
+        # Umbenennung "Family" > "Order, family" (mit Filter für alle Einträge für
+        # Ordnungen und Familien, ähnlich bisheriger "Categories")
+        res.append(Col(self, 'family', model_col=Species.family, sTitle='Order, family')),
         res.append(ThumbnailCol(self, 'thumbnail'))
         res.append(CategoryCol(self, 'categories', bSortable=False))
         res.append(er_col)
@@ -133,32 +135,35 @@ class Words(Values):
         res = []
         if self.language:
             res = [
-                ThumbnailCol(self, '_', get_object=lambda i: i.valueset.parameter),
                 LinkCol(
                     self, 'species',
                     model_col=Parameter.name,
                     get_object=lambda i: i.valueset.parameter),
                 Col(
                     self, 'name',
+                    sTitle='English name',
                     model_col=Parameter.description,
                     get_object=lambda i: i.valueset.parameter),
+                ThumbnailCol(self, '_', get_object=lambda i: i.valueset.parameter),
             ]
         elif self.parameter:
             res = [
                 LinkCol(
                     self, 'language',
                     model_col=Language.name,
-                    get_object=lambda i: i.valueset.language)
+                    get_object=lambda i: i.valueset.language),
+                Col(self, 'lineage',
+                    model_col=Languoid.lineage,
+                    format=lambda i: i.valueset.language.lineage)
             ]
-        res.append(Col(self, 'word', model_col=Value.name))
-        if self.language:
-            res.append(Col(self, 'exact meaning', model_col=Value.description))
-            res.append(Col(self, 'phonetic', model_col=Word.phonetic))
-            res.append(Col(self, 'grammatical_info', model_col=Word.grammatical_info))
-            if self.language.varieties:
-                res.append(VarietiesCol(
-                    self, 'variety',
-                    choices=[(v.pk, v.name) for v in self.language.varieties]))
+        res.append(Col(self, 'word', sTitle='Word form', model_col=Value.name))
+        res.append(Col(self, 'phonetic', sTitle='IPA', model_col=Word.phonetic))
+        res.append(Col(self, 'grammatical_notes', model_col=Word.grammatical_info))
+        res.append(Col(self, 'exact meaning', model_col=Value.description))
+        if self.language and self.language.varieties:
+            res.append(VarietiesCol(
+                self, 'variety',
+                choices=[(v.pk, v.name) for v in self.language.varieties]))
         res.append(RefsCol(self, 'references'))
         return res
 
@@ -170,7 +175,11 @@ class Words(Values):
 class Languoids(Languages):
     def col_defs(self):
         res = Languages.col_defs(self)
-        return res[:2] + [Col(self, 'lineage', model_col=Languoid.lineage)] + res[2:]
+        return res[:2] + [
+            Col(self, 'lineage',
+                model_col=Languoid.lineage,
+                choices=get_distinct_values(Languoid.lineage))
+        ] + res[2:]
 
 
 class BiomeCol(Col):
@@ -196,8 +205,8 @@ class LinkToMapCol(Col):
         return button(
             icon('globe'),
             href="#map",
-            onclick=
-            'TSAMMALEX.highlightEcoregion(CLLD.Maps.map.marker_map.' + item.id + ')')
+            onclick='TSAMMALEX.highlightEcoregion(CLLD.Maps.map.marker_map.'
+                    + item.id + ')')
 
 
 class Ecoregions(DataTable):
