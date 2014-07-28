@@ -1,14 +1,16 @@
 # coding: utf8
-from sqlalchemy.orm import joinedload, joinedload_all
+from sqlalchemy import and_
+from sqlalchemy.orm import joinedload, joinedload_all, aliased
 
 from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
 from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
 from clld.web.datatables.language import Languages
 from clld.web.util.helpers import HTML, external_link, linked_references, button, icon
-from clld.db.util import get_distinct_values, as_int
+from clld.db.util import get_distinct_values, as_int, icontains
 from clld.db.meta import DBSession
 from clld.db.models.common import Parameter, Value, Language, ValueSet
+from clld.util import nfilter
 
 from tsammalex.models import (
     Ecoregion, SpeciesEcoregion, Biome,
@@ -61,7 +63,40 @@ class EcoregionCol(CatCol):
         Col.__init__(self, *args, **kw)
 
 
+class CommonNameCol(Col):
+    def __init__(self, dt, name, lang, alias, **kw):
+        self.lang = lang
+        self.alias = alias
+        kw['sTitle'] = 'Name in %s' % lang.name
+        Col.__init__(self, dt, name, **kw)
+
+    def format(self, item):
+        for vs in item.valuesets:
+            if vs.language_pk == self.lang.pk:
+                return vs.description
+        return ''
+
+    def order(self):
+        return self.alias.description
+
+    def search(self, qs):
+        return icontains(self.alias.description, qs)
+
+
 class SpeciesTable(Parameters):
+    def __init__(self, req, *args, **kw):
+        Parameters.__init__(self, req, *args, **kw)
+        if kw.get('languages'):
+            self.languages = kw['languages']
+        elif 'languages' in req.params:
+            self.languages = nfilter([
+                Language.get(id_, default=None)
+                for id_ in req.params['languages'].split(',')])
+        else:
+            self.languages = []
+        self._langs = [
+            aliased(ValueSet, name='l%s' % i) for i in range(len(self.languages))]
+
     def base_query(self, query):
         query = query \
             .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk) \
@@ -74,6 +109,13 @@ class SpeciesTable(Parameters):
                 joinedload(Species.categories),
                 joinedload(Species.ecoregions),
                 joinedload(Species.countries))
+        if self.languages:
+            for i, lang in enumerate(self.languages):
+                query = query.join(
+                    self._langs[i],
+                    and_(self._langs[i].language_pk == lang.pk,
+                         self._langs[i].parameter_pk == Parameter.pk))
+            query = query.options(joinedload_all(Parameter.valuesets, ValueSet.values))
         return query.distinct()
 
     def col_defs(self):
@@ -83,6 +125,9 @@ class SpeciesTable(Parameters):
         res = Parameters.col_defs(self)[1:]
         res[0].js_args['sTitle'] = 'Species'
         res.append(Col(self, 'description', sTitle='English name')),
+        if self.languages:
+            for i, lang in enumerate(self.languages):
+                res.append(CommonNameCol(self, 'cn%s' % i, lang, self._langs[i]))
         res.append(
             Col(self, 'genus', model_col=Species.genus, sTitle='Basic term (Eng)')),
         # Umbenennung "Family" > "Order, family" (mit Filter für alle Einträge für
@@ -92,6 +137,12 @@ class SpeciesTable(Parameters):
         res.append(CategoryCol(self, 'categories', bSortable=False))
         res.append(er_col)
         res.append(CountryCol(self, 'countries', bSortable=False))
+        return res
+
+    def xhr_query(self):
+        res = Parameters.xhr_query(self)
+        if self.languages:
+            res['languages'] = ','.join(l.id for l in self.languages)
         return res
 
 

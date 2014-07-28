@@ -5,6 +5,7 @@ import sys
 import json
 from itertools import groupby
 
+from sqlalchemy.orm import joinedload
 from path import path
 from clld.scripts.util import (
     initializedb, Data, bibtex2source, glottocodes_by_isocode, add_language_codes,
@@ -156,6 +157,9 @@ def main(args):
             delimiter=",",
             lineterminator='\r\n'
     ):
+        #
+        # TODO: respect flags thumbnail1 and thumbnail2!
+        #
         # id,species_id,name,mime_type,src,width,height,author,date,place,comments,
         # keywords,permission
         jsondata = dict(width=int(image.width), height=int(image.height))
@@ -191,6 +195,9 @@ def prime_cache(args):
     This procedure should be separate from the db initialization, because
     it will have to be run periodically whenever data has been updated.
     """
+    for vs in DBSession.query(common.ValueSet).options(
+            joinedload(common.ValueSet.values)):
+        vs.description = '; '.join(nfilter([v.name for v in vs.values]))
 
 
 if __name__ == '__main__':
