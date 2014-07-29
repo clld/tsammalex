@@ -17,7 +17,7 @@ from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
-    ValueSetReference,
+    ValueSetReference, Unit,
 )
 
 from tsammalex.interfaces import IEcoregion
@@ -347,8 +347,11 @@ class SpeciesCategory(Base):
     category_pk = Column(Integer, ForeignKey('category.pk'))
 
 
-class Category(Base, IdNameDescriptionMixin):
+#class Category(Base, IdNameDescriptionMixin):
+@implementer(interfaces.IUnit)
+class Category(Unit, CustomModelMixin):
     __csv_name__ = 'categories'
+    pk = Column(Integer, ForeignKey('unit.pk'), primary_key=True)
 
     def csv_head(self):
         return ['id', 'name', 'description']

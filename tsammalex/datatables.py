@@ -1,5 +1,5 @@
 # coding: utf8
-from sqlalchemy import and_
+from sqlalchemy import and_, null
 from sqlalchemy.orm import joinedload, joinedload_all, aliased
 
 from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
@@ -49,8 +49,24 @@ class CountryCol(CatCol):
     __spec__ = ('countries', Country)
 
 
-class CategoryCol(CatCol):
-    __spec__ = ('categories', Category)
+class CategoryCol(Col):
+    def __init__(self, dt, *args, **kw):
+        self.lang_pks = [l.pk for l in dt.languages]
+        q = DBSession.query(Category.name).order_by(Category.name)
+        if self.lang_pks:
+            q = q.filter(Category.language_pk.in_(self.lang_pks))
+        else:
+            q = q.filter(Category.language_pk == null())
+        kw['choices'] = [r[0] for r in q]
+        Col.__init__(self, dt, *args, **kw)
+
+    def format(self, item):
+        return ', '.join(o.name for o in item.categories if
+                         (self.lang_pks and o.language_pk in self.lang_pks) or
+                         (not self.lang_pks and not o.language_pk))
+
+    def search(self, qs):
+        return Category.name == qs
 
 
 class EcoregionCol(CatCol):
@@ -99,8 +115,6 @@ class SpeciesTable(Parameters):
 
     def base_query(self, query):
         query = query \
-            .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk) \
-            .outerjoin(Category, SpeciesCategory.category_pk == Category.pk)\
             .outerjoin(SpeciesCountry, SpeciesCountry.species_pk == Parameter.pk) \
             .outerjoin(Country, SpeciesCountry.country_pk == Country.pk)\
             .outerjoin(SpeciesEcoregion, SpeciesEcoregion.species_pk == Parameter.pk)\
@@ -117,7 +131,19 @@ class SpeciesTable(Parameters):
                     self._langs[i],
                     and_(self._langs[i].language_pk == lang.pk,
                          self._langs[i].parameter_pk == Parameter.pk))
-            query = query.options(joinedload_all(Parameter.valuesets, ValueSet.values))
+
+            query = query \
+                .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk) \
+                .outerjoin(Category,
+                           and_(SpeciesCategory.category_pk == Category.pk,
+                                Category.language_pk.in_([l.pk for l in self.languages])))\
+                .options(joinedload_all(Parameter.valuesets, ValueSet.values))
+        else:
+            query = query\
+                .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk) \
+                .outerjoin(Category,
+                           and_(SpeciesCategory.category_pk == Category.pk,
+                                Category.language_pk == null()))
         return query.distinct()
 
     def col_defs(self):

@@ -195,6 +195,13 @@ def prime_cache(args):
     This procedure should be separate from the db initialization, because
     it will have to be run periodically whenever data has been updated.
     """
+    species = models.Species.get('acaciaerioloba')
+    deu = models.Languoid.get('deu')
+    for i, cat in enumerate(['Baum', 'Pflanze', 'Akazie']):
+        cat = models.Category(id='deu-%s' % i, name=cat, language=deu)
+        DBSession.add(cat)
+        DBSession.flush()
+        DBSession.add(models.SpeciesCategory(species_pk=species.pk, category_pk=cat.pk))
     for vs in DBSession.query(common.ValueSet).options(
             joinedload(common.ValueSet.values)):
         vs.description = '; '.join(nfilter([v.name for v in vs.values]))
