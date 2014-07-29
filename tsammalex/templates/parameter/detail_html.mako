@@ -20,24 +20,18 @@
 </div>
 
 
+
 <h2>${ctx.description or ctx.name}</h2>
 
 <div class="row-fluid">
-    <div class="span7">
+    <div class="span6">
+<ul class="nav nav-pills">
+    <li class="active"><a href="#map-container"><span class="icon-globe"> </span> Map</a></li>
+    <li class="active"><a href="#images"><span class="icon-camera"> </span> Pictures</a></li>
+    <li class="active"><a href="#names"><span class="icon-list"> </span> Names</a></li>
+</ul>
 <table class="table table-condensed table-nonfluid">
     <tbody>
-        ##% if ctx.genus:
-        ##    <tr>
-        ##        <td>Order:</td>
-        ##        <td>${ctx.genus}</td>
-        ##    </tr>
-        ##% endif
-        ##% if ctx.family:
-        ##    <tr>
-        ##        <td>Family:</td>
-        ##        <td>${ctx.family}</td>
-        ##    </tr>
-        ##% endif
         <tr>
             <td>Common categories (Eng):</td>
             <td>
@@ -94,7 +88,7 @@
     </tbody>
 </table>
     </div>
-    <div class="span5 well well-small pull-right">
+    <div class="span6">
         ${request.map.render()}
     </div>
 </div>
@@ -102,7 +96,7 @@
 <% files = [f_ for f_ in ctx._files if f_.name.startswith('small') or f_.name.startswith('large')] %>
 
 % for chunk in [files[i:i + 3] for i in range(0, len(files), 3)]:
-<div class="row-fluid">
+<div class="row-fluid" id="images">
     % for f in chunk:
         <div class="span4">
             <div class="well">
@@ -137,4 +131,6 @@
     <hr/>
 % endfor
 
+<div id="names">
 ${request.get_datatable('values', h.models.Value, parameter=ctx).render()}
+</div>

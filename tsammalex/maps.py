@@ -1,3 +1,5 @@
+from copy import copy
+
 from clld.web.maps import ParameterMap, Map, Legend, Layer
 from clld.web.util.htmllib import HTML, literal
 from clld.web.util.helpers import JS
@@ -7,38 +9,55 @@ from clld.db.util import as_int, get_distinct_values
 from tsammalex.models import Biome, Languoid
 
 
+OPTIONS = {'show_labels': True, 'icon_size': 20, 'max_zoom': 8}
+
+
+def li(eid, label, checked=False):
+    input_attrs = dict(
+        type='radio',
+        class_='stay-open lineage inline',
+        name='lineage',
+        value=label,
+        onclick=JS("TSAMMALEX.toggle_languages")(eid))
+    if checked:
+        input_attrs['checked'] = 'checked'
+    return HTML.label(
+        HTML.input(**input_attrs),
+        ' ',
+        label,
+        class_='stay-open',
+        style="margin-left:5px; margin-right:5px;",
+    )
+
+
+def lineage_legend(map_):
+    items = [li(map_.eid, '--any--', checked=True)]
+    for l in get_distinct_values(Languoid.lineage):
+        items.append(li(map_.eid, l))
+
+    return Legend(map_, 'lineage', items, stay_open=True)
+
+
 class SpeciesMap(ParameterMap):
     def get_options(self):
-        return {'sidebar': True, 'show_labels': True}
+        opts = copy(OPTIONS)
+        opts['height'] = 300
+        opts['hash'] = False
+        return opts
+
+    def get_legends(self):
+        yield lineage_legend(self)
+
+        for legend in super(SpeciesMap, self).get_legends():
+            yield legend
 
 
 class LanguoidMap(Map):
     def get_options(self):
-        return {'show_labels': True, 'icon_size': 20, 'max_zoom': 8}
+        return OPTIONS
 
     def get_legends(self):
-        def li(label, checked=False):
-            input_attrs = dict(
-                type='radio',
-                class_='stay-open lineage inline',
-                name='lineage',
-                value=label,
-                onclick=JS("TSAMMALEX.toggle_languages")(self.eid))
-            if checked:
-                input_attrs['checked'] = 'checked'
-            return HTML.label(
-                HTML.input(**input_attrs),
-                ' ',
-                label,
-                class_='stay-open',
-                style="margin-left:5px; margin-right:5px;",
-            )
-
-        items = [li('--any--', checked=True)]
-        for l in get_distinct_values(Languoid.lineage):
-            items.append(li(l))
-
-        yield Legend(self, 'lineage', items, stay_open=True)
+        yield lineage_legend(self)
 
         for legend in super(LanguoidMap, self).get_legends():
             yield legend

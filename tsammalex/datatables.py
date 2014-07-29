@@ -108,7 +108,9 @@ class SpeciesTable(Parameters):
             .options(
                 joinedload(Species.categories),
                 joinedload(Species.ecoregions),
-                joinedload(Species.countries))
+                joinedload(Species.countries),
+                #joinedload(Parameter._files)
+                )
         if self.languages:
             for i, lang in enumerate(self.languages):
                 query = query.join(
