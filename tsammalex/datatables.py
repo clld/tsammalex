@@ -1,5 +1,5 @@
 # coding: utf8
-from sqlalchemy import and_, null
+from sqlalchemy import and_, null, or_
 from sqlalchemy.orm import joinedload, joinedload_all, aliased
 
 from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
@@ -51,19 +51,17 @@ class CountryCol(CatCol):
 
 class CategoryCol(Col):
     def __init__(self, dt, *args, **kw):
-        self.lang_pks = [l.pk for l in dt.languages]
-        q = DBSession.query(Category.name).order_by(Category.name)
-        if self.lang_pks:
-            q = q.filter(Category.language_pk.in_(self.lang_pks))
-        else:
-            q = q.filter(Category.language_pk == null())
+        assert dt.languages
+        self.lang_dict = {l.pk: l for l in dt.languages}
+        q = DBSession.query(Category.name).order_by(Category.name)\
+            .filter(Category.language_pk.in_(list(self.lang_dict.keys())))
         kw['choices'] = [r[0] for r in q]
         Col.__init__(self, dt, *args, **kw)
 
     def format(self, item):
-        return ', '.join(o.name for o in item.categories if
-                         (self.lang_pks and o.language_pk in self.lang_pks) or
-                         (not self.lang_pks and not o.language_pk))
+        names = ['%s (%s)' % (o.name, self.lang_dict[o.language_pk].id)
+                 for o in item.categories if o.language_pk in self.lang_dict]
+        return HTML.ul(*[HTML.li(name) for name in names], class_="unstyled")
 
     def search(self, qs):
         return Category.name == qs
@@ -83,13 +81,15 @@ class CommonNameCol(Col):
     def __init__(self, dt, name, lang, alias, **kw):
         self.lang = lang
         self.alias = alias
-        kw['sTitle'] = 'Name in %s' % lang.name
+        kw['sTitle'] = 'Names in %s' % lang.name
         Col.__init__(self, dt, name, **kw)
 
     def format(self, item):
         for vs in item.valuesets:
             if vs.language_pk == self.lang.pk:
-                return vs.description
+                return HTML.ul(
+                    *[HTML.li(n.strip()) for n in vs.description.split(';')],
+                    class_="unstyled")
         return ''
 
     def order(self):
@@ -97,6 +97,22 @@ class CommonNameCol(Col):
 
     def search(self, qs):
         return icontains(self.alias.description, qs)
+
+
+class ClassificationCol(Col):
+    def format(self, item):
+        return HTML.ul(
+            *[HTML.li('%s %s' % ('-' * i, n)) for i, n in enumerate(nfilter([item.order, item.family, item.genus]))],
+            class_="unstyled")
+
+    def search(self, qs):
+        return or_(
+            icontains(Species.order, qs),
+            icontains(Species.family, qs),
+            icontains(Species.genus, qs))
+
+    def order(self):
+        return [Species.order, Species.family, Species.genus]
 
 
 class SpeciesTable(Parameters):
@@ -152,17 +168,24 @@ class SpeciesTable(Parameters):
             er_col.js_args['sFilter'] = self.req.params['er']
         res = Parameters.col_defs(self)[1:]
         res[0].js_args['sTitle'] = 'Species'
-        res.append(Col(self, 'description', sTitle='English name')),
+        res.append(Col(self, 'description', sTitle='Common name')),
         if self.languages:
             for i, lang in enumerate(self.languages):
                 res.append(CommonNameCol(self, 'cn%s' % i, lang, self._langs[i]))
-        res.append(
-            Col(self, 'genus', model_col=Species.genus, sTitle='Basic term (Eng)')),
+        #res.append(
+        #    Col(self, 'genus', model_col=Species.genus, sTitle='Basic term (Eng)')),
         # Umbenennung "Family" > "Order, family" (mit Filter für alle Einträge für
         # Ordnungen und Familien, ähnlich bisheriger "Categories")
-        res.append(Col(self, 'family', model_col=Species.family, sTitle='Order, family')),
+        res.append(ClassificationCol(self, 'order', sTitle='Classification')),
+        #res.append(Col(
+        #    self, 'family',
+        #    model_col=Species.family,
+        #    sTitle='Family',
+        #    choices=get_distinct_values(Species.family))),
+
         res.append(ThumbnailCol(self, 'thumbnail'))
-        res.append(CategoryCol(self, 'categories', bSortable=False))
+        if self.languages:
+            res.append(CategoryCol(self, 'categories', bSortable=False))
         res.append(er_col)
         res.append(CountryCol(self, 'countries', bSortable=False))
         return res
@@ -218,11 +241,11 @@ class Words(Values):
                     self, 'species',
                     model_col=Parameter.name,
                     get_object=lambda i: i.valueset.parameter),
-                Col(
-                    self, 'name',
-                    sTitle='English name',
-                    model_col=Parameter.description,
-                    get_object=lambda i: i.valueset.parameter),
+                #Col(
+                #    self, 'name',
+                #    sTitle='English name',
+                #    model_col=Parameter.description,
+                #    get_object=lambda i: i.valueset.parameter),
                 ThumbnailCol(self, '_', get_object=lambda i: i.valueset.parameter),
             ]
         elif self.parameter:
@@ -236,9 +259,10 @@ class Words(Values):
                     format=lambda i: i.valueset.language.lineage)
             ]
         res.append(Col(self, 'word', sTitle='Word form', model_col=Value.name))
+        res.append(Col(self, 'blt', sTitle='Basic-level term', model_col=Value.description))
         res.append(Col(self, 'phonetic', sTitle='IPA', model_col=Word.phonetic))
         res.append(Col(self, 'grammatical_notes', model_col=Word.grammatical_info))
-        res.append(Col(self, 'exact meaning', model_col=Value.description))
+        res.append(Col(self, 'exact meaning', model_col=Word.meaning))
         if self.language and self.language.varieties:
             res.append(VarietiesCol(
                 self, 'variety',

@@ -13,10 +13,11 @@ from clld.scripts.util import (
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib.dsv import reader
-from clld.util import nfilter
+from clld.util import nfilter, slug
 
 from tsammalex import models
 from tsammalex.scripts import wiki
+from tsammalex.scripts.util import update_species_data
 
 
 files_dir = path('/home/robert/venvs/clld/tsammalex/data/files')
@@ -151,6 +152,37 @@ def main(args):
     from_csv(args, models.Languoid, data, visitor=visitor)
     from_csv(args, models.Species, data)
 
+    eng = data['Languoid']['eng']
+    for species in data['Species'].values():
+        for i, name in enumerate(
+                nfilter([s.strip() for s in species.description.split(',')])):
+            DBSession.add(models.Word.from_csv(
+                [
+                    '%s-%s-%s' % (species.id, eng.id, i),
+                    name,
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    eng.id,
+                    '',
+                    species.id,
+                    ''
+                ],
+                data=data,
+                description=species.genus))
+        if species.genus:
+            genus = slug(species.genus)
+            cat = data['Category'].get(genus)
+            if not cat:
+                cat = data.add(
+                    models.Category, genus,
+                    id='eng-%s' % genus,
+                    name=species.genus,
+                    language=eng)
+            cat.species.append(species)
+
     for image in reader(
             args.data_file('dump', 'images.csv'),
             namedtuples=True,
@@ -202,9 +234,33 @@ def prime_cache(args):
         DBSession.add(cat)
         DBSession.flush()
         DBSession.add(models.SpeciesCategory(species_pk=species.pk, category_pk=cat.pk))
+
+    def format_name(v):
+        r = ''
+        if v.description:
+            r = v.description + ': '
+        return r + (v.name or '')
+
     for vs in DBSession.query(common.ValueSet).options(
             joinedload(common.ValueSet.values)):
-        vs.description = '; '.join(nfilter([v.name for v in vs.values]))
+        vs.description = '; '.join(nfilter([format_name(v) for v in vs.values]))
+
+    with open(args.data_file('classification.json')) as fp:
+        sdata = json.load(fp)
+
+    orders = {}
+    for species in DBSession.query(models.Species):
+        update_species_data(species, sdata[species.id])
+        orders[species.order] = 1
+        orders[species.family] = 1
+        orders[species.genus] = 1
+
+    eng = models.Languoid.get('eng')
+    for cat in DBSession.query(models.Category):
+        if cat.name in orders:
+            DBSession.delete(cat)
+        if not cat.language:
+            cat.language = eng
 
 
 if __name__ == '__main__':

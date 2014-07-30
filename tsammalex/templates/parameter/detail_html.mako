@@ -5,13 +5,16 @@
 
 % if ctx.family or ctx.genus:
 <ul class="breadcrumb">
-    <li class="active">${ctx.name} <span class="divider">/</span></li>
-    % if ctx.genus:
-        <li class="active">Order: ${ctx.genus} <span class="divider">/</span></li>
+    % if ctx.order:
+        <li class="active">Order: ${ctx.order} <span class="divider">/</span></li>
     % endif
     % if ctx.family:
-    <li class="active">Family: ${ctx.family}</li>
+    <li class="active">Family: ${ctx.family} <span class="divider">/</span></li>
     % endif
+    % if ctx.genus:
+        <li class="active">Genus: ${ctx.genus} <span class="divider">/</span></li>
+    % endif
+    <li class="active">Species: ${ctx.name}</li>
 </ul>
 % endif
 

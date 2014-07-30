@@ -104,8 +104,13 @@ class Bibrec(Source, CustomModelMixin):
 
 @implementer(interfaces.IValue)
 class Word(Value, CustomModelMixin):
+    """
+    name: the word form
+    description: the basic-level term.
+    """
     __csv_name__ = 'words'
     pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
+    meaning = Column(Unicode)
     phonetic = Column(Unicode)
     grammatical_info = Column(Unicode)
     comment = Column(Unicode)
@@ -136,7 +141,7 @@ class Word(Value, CustomModelMixin):
         return [
             self.id,
             self.name,
-            self.description,
+            self.meaning,
             self.phonetic,
             self.grammatical_info,
             self.comment,
@@ -150,8 +155,10 @@ class Word(Value, CustomModelMixin):
         ]
 
     @classmethod
-    def from_csv(cls, row, data=None):
+    def from_csv(cls, row, data=None, description=None):
         obj = super(Word, cls).from_csv(row)
+        obj.description = description
+        obj.meaning = row[2]
         sid = row[9]
         lid = row[7]
         vsid = '%s-%s' % (sid, lid)
@@ -199,7 +206,9 @@ class Species(Parameter, CustomModelMixin):
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
     family = Column(Unicode)
     genus = Column(Unicode)
+    order = Column(Unicode)
     eol_id = Column(String)
+
     wikipedia_url = Column(String)
 
     def csv_head(self):
