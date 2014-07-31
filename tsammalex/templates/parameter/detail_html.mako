@@ -3,6 +3,7 @@
 <%! active_menu_item = "parameters" %>
 <%block name="title">${_('Parameter')} ${ctx.name} (${ctx.description})</%block>
 
+<% files = [f_ for f_ in ctx._files if f_.name.startswith('small') or f_.name.startswith('large')] %>
 <div style="float: right; margin-top: 10px;">
     ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
 </div>
@@ -13,7 +14,9 @@
     <div class="span6">
 <ul class="nav nav-pills">
     <li class="active"><a href="#map-container"><span class="icon-globe"> </span> Map</a></li>
-    <li class="active"><a href="#images"><span class="icon-camera"> </span> Pictures</a></li>
+    % if files:
+        <li class="active"><a href="#images"><span class="icon-camera"> </span> Pictures</a></li>
+    % endif
     <li class="active"><a href="#names"><span class="icon-list"> </span> Names</a></li>
 </ul>
 <table class="table table-condensed table-nonfluid">
@@ -73,7 +76,6 @@
     </div>
 </div>
 
-<% files = [f_ for f_ in ctx._files if f_.name.startswith('small') or f_.name.startswith('large')] %>
 
 % for chunk in [files[i:i + 3] for i in range(0, len(files), 3)]:
 <div class="row-fluid" id="images">

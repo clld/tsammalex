@@ -6,8 +6,7 @@ from clld.db.meta import DBSession
 from clld.db.models.common import Parameter_files
 
 from tsammalex.models import (
-    Languoid, Word, Species, Variety, Country, Category, Bibrec,
-    TsammalexEditor,
+    Languoid, Word, Species, Country, Category, Bibrec, TsammalexEditor,
 )
 
 
@@ -17,7 +16,6 @@ def main(args):
         ('images', Parameter_files),
         Country,
         Category,
-        Variety,
         Languoid,
         Species,
         Word,
@@ -27,9 +25,7 @@ def main(args):
             name, model = model
         else:
             name = model.__csv_name__
-        with open(args.data_file('dump', name + '.csv'), 'w') as fp:
-            writer = UnicodeWriter(fp)
-
+        with UnicodeWriter(args.data_file('dump', name + '.csv')) as writer:
             if name == 'images':
                 cols = [
                     'id', 'species_id', 'name', 'mime_type', 'src', 'width', 'height',

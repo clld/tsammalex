@@ -16,7 +16,7 @@ from tsammalex.models import (
     Ecoregion, SpeciesEcoregion, Biome,
     Country, SpeciesCountry,
     Category, SpeciesCategory, Species,
-    Word, Variety, WordVariety,
+    Word,
     Languoid,
 )
 from tsammalex.util import format_classification
@@ -89,7 +89,6 @@ class CommonNameCol(Col):
         self.lang = lang
         self.alias = alias
         kw['sTitle'] = 'Name in %s' % lang.name
-        kw['bSortable'] = False
         Col.__init__(self, dt, name, **kw)
 
     def format(self, item):
@@ -153,16 +152,20 @@ class SpeciesTable(Parameters):
                 )
         if self.languages:
             for i, lang in enumerate(self.languages):
-                query = query.join(
+                query = query.outerjoin(
                     self._langs[i],
                     and_(self._langs[i].language_pk == lang.pk,
                          self._langs[i].parameter_pk == Parameter.pk))
 
             query = query \
+                .filter(or_(*[
+                    self._langs[i].pk != null() for i in range(len(self._langs))]))\
                 .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk) \
-                .outerjoin(Category,
-                           and_(SpeciesCategory.category_pk == Category.pk,
-                                Category.language_pk.in_([l.pk for l in self.languages])))\
+                .outerjoin(
+                    Category,
+                    and_(
+                        SpeciesCategory.category_pk == Category.pk,
+                        Category.language_pk.in_([l.pk for l in self.languages])))\
                 .options(joinedload_all(Parameter.valuesets, ValueSet.values))
         else:
             query = query\
@@ -220,16 +223,6 @@ class RefsCol(Col):
         return HTML.ul(*lis, class_='unstyled')
 
 
-class VarietiesCol(Col):
-    __kw__ = dict(bSortable=False)
-
-    def search(self, qs):
-        return Variety.pk == int(qs)
-
-    def format(self, item):
-        return ', '.join(v.name for v in item.varieties)
-
-
 class MultiCategoriesCol(Col):
     __kw__ = dict(bSortable=False, bSearchable=False)
 
@@ -244,7 +237,7 @@ class Words(Values):
     def base_query(self, query):
         query = Values.base_query(self, query)
         if self.language:
-            query = query.outerjoin(WordVariety, Variety)\
+            query = query\
                 .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk)\
                 .outerjoin(
                     Category,
@@ -285,10 +278,6 @@ class Words(Values):
         res.append(Col(self, 'grammatical_notes', model_col=Word.grammatical_info))
         res.append(Col(self, 'exact meaning', model_col=Word.meaning))
         if self.language:
-            if self.language.varieties:
-                res.append(VarietiesCol(
-                    self, 'variety',
-                    choices=[(v.pk, v.name) for v in self.language.varieties]))
             res.append(CategoryCol(
                 self, 'categories',
                 [self.language],

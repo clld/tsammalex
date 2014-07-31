@@ -7,42 +7,32 @@ class Tests(TestWithEnv):
     __with_custom_language__ = False
 
     def test_Word(self):
-        from tsammalex.models import Word, Variety, Bibrec
+        from tsammalex.models import Word, Bibrec, Species
 
         class Data(dict):
             def add(self, *args, **kw):
                 return
 
         vs = common.ValueSet(id='vs')
-        vs.parameter = common.Parameter(id='p')
+        vs.parameter = Species(id='p')
         vs.language = common.Language(id='l')
         data = Data(
             ValueSet={},
             Languoid=dict(l=vs.language),
             Species=dict(p=vs.parameter),
             Contribution=dict(tsammalex=common.Contribution(id='c')),
-            Variety={v.id: v for v in DBSession.query(Variety)},
             Bibrec={v.id: v for v in DBSession.query(Bibrec)})
         l = Word(id='w', valueset=vs)
         row = l.to_csv()
         l2 = Word.from_csv(row, data=data)
         self.assertEquals(l2.id, l.id)
-        row[8] = 'ngh-e'
-        row[10] = 'picker2002[12]'
+        row[14] = 'picker2002[12]'
         Word.from_csv(row, data=data)
-        row[10] = 'picker2002'
+        row[14] = 'picker2002'
         Word.from_csv(row, data=data)
         data['ValueSet'] = {'p-l': vs}
         Word.from_csv(row, data=data)
         self.assert_(list(Word.csv_query(DBSession)))
-
-    def test_Variety(self):
-        from tsammalex.models import Variety
-
-        l = Variety(id='l')
-        row = l.to_csv()
-        l2 = Variety.from_csv(row)
-        self.assertEquals(l2.id, l.id)
 
     def test_TsammalexEditor(self):
         from tsammalex.models import TsammalexEditor
@@ -55,16 +45,16 @@ class Tests(TestWithEnv):
         self.assertEquals(l2.contributor.name, l.contributor.name)
 
     def test_Species(self):
-        from tsammalex.models import Species, Category, Ecoregion, Country
+        from tsammalex.models import Species, Ecoregion, Country
 
         l = Species(id='l')
         row = l.to_csv()
         l2 = Species.from_csv(row)
         self.assertEquals(l2.id, l.id)
 
-        row = ['id', 'name', 'description', None, None, None, None]
+        row = ['id', 'name', 'description', None, None, None, None, None, None, None]
         data = {}
-        for cls in [Country, Category, Ecoregion]:
+        for cls in [Country, Ecoregion]:
             data[cls.mapper_name()] = {}
             for i, obj in enumerate(DBSession.query(cls)):
                 data[cls.mapper_name()][obj.id] = obj
@@ -72,13 +62,11 @@ class Tests(TestWithEnv):
         Species.from_csv(row, data=data)
 
     def test_Languoid(self):
-        from tsammalex.models import Languoid, Variety
+        from tsammalex.models import Languoid
 
         l = Languoid(id='l', latitude=23.3)
-        v = Variety(id='v')
-        l.varieties.append(v)
         row = l.to_csv()
-        l2 = Languoid.from_csv(row, data=dict(Variety=dict(v=v)))
+        l2 = Languoid.from_csv(row)
         self.assertEquals(l2.id, l.id)
         self.assertAlmostEqual(l.latitude, l2.latitude)
 
