@@ -8,6 +8,7 @@ from sqlalchemy import (
     Integer,
     ForeignKey,
     Float,
+    Boolean,
 )
 from sqlalchemy.orm import relationship, backref, joinedload_all
 from sqlalchemy.ext.declarative import declared_attr
@@ -73,6 +74,7 @@ class Languoid(Language, CustomModelMixin):
     __csv_name__ = 'languages'
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
     lineage = Column(Unicode)
+    is_english = Column(Boolean, default=False)
 
     def csv_head(self):
         return [
@@ -106,13 +108,14 @@ class Bibrec(Source, CustomModelMixin):
 class Word(Value, CustomModelMixin):
     """
     name: the word form
-    description: the basic-level term.
+    description: the generic term.
     """
     __csv_name__ = 'words'
     pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
     meaning = Column(Unicode)
     phonetic = Column(Unicode)
     grammatical_info = Column(Unicode)
+    notes = Column(Unicode)
     comment = Column(Unicode)
     varieties = relationship(
         Variety, secondary=WordVariety.__table__, order_by=Variety.id)

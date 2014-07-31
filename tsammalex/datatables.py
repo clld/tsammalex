@@ -19,6 +19,7 @@ from tsammalex.models import (
     Word, Variety, WordVariety,
     Languoid,
 )
+from tsammalex.util import format_classification
 
 
 class ThumbnailCol(Col):
@@ -50,17 +51,23 @@ class CountryCol(CatCol):
 
 
 class CategoryCol(Col):
-    def __init__(self, dt, *args, **kw):
-        assert dt.languages
-        self.lang_dict = {l.pk: l for l in dt.languages}
+    def __init__(self, dt, name, languages, **kw):
+        assert languages
+        self.lang_dict = {l.pk: l for l in languages}
         q = DBSession.query(Category.name).order_by(Category.name)\
             .filter(Category.language_pk.in_(list(self.lang_dict.keys())))
         kw['choices'] = [r[0] for r in q]
-        Col.__init__(self, dt, *args, **kw)
+        Col.__init__(self, dt, name, **kw)
+
+    def _cat(self, cat):
+        if len(self.lang_dict) > 1:
+            return '%s (%s)' % (cat.name, self.lang_dict[cat.language_pk].id)
+        return cat.name
 
     def format(self, item):
-        names = ['%s (%s)' % (o.name, self.lang_dict[o.language_pk].id)
-                 for o in item.categories if o.language_pk in self.lang_dict]
+        obj = self.get_obj(item)
+        names = [
+            self._cat(o) for o in obj.categories if o.language_pk in self.lang_dict]
         return HTML.ul(*[HTML.li(name) for name in names], class_="unstyled")
 
     def search(self, qs):
@@ -81,15 +88,14 @@ class CommonNameCol(Col):
     def __init__(self, dt, name, lang, alias, **kw):
         self.lang = lang
         self.alias = alias
-        kw['sTitle'] = 'Names in %s' % lang.name
+        kw['sTitle'] = 'Name in %s' % lang.name
+        kw['bSortable'] = False
         Col.__init__(self, dt, name, **kw)
 
     def format(self, item):
         for vs in item.valuesets:
             if vs.language_pk == self.lang.pk:
-                return HTML.ul(
-                    *[HTML.li(n.strip()) for n in vs.description.split(';')],
-                    class_="unstyled")
+                return vs.description
         return ''
 
     def order(self):
@@ -100,16 +106,20 @@ class CommonNameCol(Col):
 
 
 class ClassificationCol(Col):
+    def __init__(self, *args, **kw):
+        choices = set()
+        for row in DBSession.query(Species.order, Species.family, Species.genus):
+            for name in row:
+                if name:
+                    choices.add(name)
+        kw['choices'] = sorted(choices)
+        Col.__init__(self, *args, **kw)
+
     def format(self, item):
-        return HTML.ul(
-            *[HTML.li('%s %s' % ('-' * i, n)) for i, n in enumerate(nfilter([item.order, item.family, item.genus]))],
-            class_="unstyled")
+        return format_classification(item)
 
     def search(self, qs):
-        return or_(
-            icontains(Species.order, qs),
-            icontains(Species.family, qs),
-            icontains(Species.genus, qs))
+        return or_(Species.order == qs, Species.family == qs, Species.genus == qs)
 
     def order(self):
         return [Species.order, Species.family, Species.genus]
@@ -166,28 +176,23 @@ class SpeciesTable(Parameters):
         er_col = EcoregionCol(self, 'ecoregions', bSortable=False)
         if 'er' in self.req.params:
             er_col.js_args['sFilter'] = self.req.params['er']
-        res = Parameters.col_defs(self)[1:]
-        res[0].js_args['sTitle'] = 'Species'
-        res.append(Col(self, 'description', sTitle='Common name')),
+
+        res = [
+            LinkCol(self, 'name', sTitle='Species'),
+            Col(self, 'description', sTitle='English name'),
+            ClassificationCol(self, 'order', sTitle='Biological classification'),
+            ThumbnailCol(self, 'thumbnail'),
+            # TODO: second thumbnail?
+        ]
         if self.languages:
             for i, lang in enumerate(self.languages):
                 res.append(CommonNameCol(self, 'cn%s' % i, lang, self._langs[i]))
-        #res.append(
-        #    Col(self, 'genus', model_col=Species.genus, sTitle='Basic term (Eng)')),
-        # Umbenennung "Family" > "Order, family" (mit Filter für alle Einträge für
-        # Ordnungen und Familien, ähnlich bisheriger "Categories")
-        res.append(ClassificationCol(self, 'order', sTitle='Classification')),
-        #res.append(Col(
-        #    self, 'family',
-        #    model_col=Species.family,
-        #    sTitle='Family',
-        #    choices=get_distinct_values(Species.family))),
+            res.append(CategoryCol(self, 'categories', self.languages, bSortable=False))
 
-        res.append(ThumbnailCol(self, 'thumbnail'))
-        if self.languages:
-            res.append(CategoryCol(self, 'categories', bSortable=False))
-        res.append(er_col)
-        res.append(CountryCol(self, 'countries', bSortable=False))
+        res.extend([
+            er_col,
+            CountryCol(self, 'countries', bSortable=False)])
+        # TODO: characteristics col?
         return res
 
     def xhr_query(self):
@@ -225,13 +230,29 @@ class VarietiesCol(Col):
         return ', '.join(v.name for v in item.varieties)
 
 
+class MultiCategoriesCol(Col):
+    __kw__ = dict(bSortable=False, bSearchable=False)
+
+    def format(self, item):
+        names = [
+            o.name for o in item.valueset.parameter.categories
+            if o.language_pk == item.valueset.language_pk]
+        return HTML.ul(*[HTML.li(name) for name in names], class_="unstyled")
+
+
 class Words(Values):
     def base_query(self, query):
         query = Values.base_query(self, query)
         if self.language:
-            query = query.outerjoin(WordVariety, Variety)
-            query = query.options(joinedload_all(Value.valueset, ValueSet.parameter))
-        return query
+            query = query.outerjoin(WordVariety, Variety)\
+                .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk)\
+                .outerjoin(
+                    Category,
+                    and_(
+                        SpeciesCategory.category_pk == Category.pk,
+                        Category.language_pk == self.language.pk))
+        return query.options(joinedload_all(
+            Value.valueset, ValueSet.parameter, Species.categories))
 
     def col_defs(self):
         res = []
@@ -258,15 +279,23 @@ class Words(Values):
                     model_col=Languoid.lineage,
                     format=lambda i: i.valueset.language.lineage)
             ]
-        res.append(Col(self, 'word', sTitle='Word form', model_col=Value.name))
-        res.append(Col(self, 'blt', sTitle='Basic-level term', model_col=Value.description))
+        res.append(LinkCol(self, 'name', sTitle='Word form'))
+        res.append(Col(self, 'blt', sTitle='Generic term', model_col=Value.description))
         res.append(Col(self, 'phonetic', sTitle='IPA', model_col=Word.phonetic))
         res.append(Col(self, 'grammatical_notes', model_col=Word.grammatical_info))
         res.append(Col(self, 'exact meaning', model_col=Word.meaning))
-        if self.language and self.language.varieties:
-            res.append(VarietiesCol(
-                self, 'variety',
-                choices=[(v.pk, v.name) for v in self.language.varieties]))
+        if self.language:
+            if self.language.varieties:
+                res.append(VarietiesCol(
+                    self, 'variety',
+                    choices=[(v.pk, v.name) for v in self.language.varieties]))
+            res.append(CategoryCol(
+                self, 'categories',
+                [self.language],
+                get_object=lambda i: i.valueset.parameter))
+        if self.parameter:
+            res.append(MultiCategoriesCol(self, 'categories'))
+        res.append(Col(self, 'general_notes', model_col=Word.notes))
         res.append(RefsCol(self, 'references'))
         return res
 

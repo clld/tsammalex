@@ -3,26 +3,9 @@
 <%! active_menu_item = "parameters" %>
 <%block name="title">${_('Parameter')} ${ctx.name} (${ctx.description})</%block>
 
-% if ctx.family or ctx.genus:
-<ul class="breadcrumb">
-    % if ctx.order:
-        <li class="active">Order: ${ctx.order} <span class="divider">/</span></li>
-    % endif
-    % if ctx.family:
-    <li class="active">Family: ${ctx.family} <span class="divider">/</span></li>
-    % endif
-    % if ctx.genus:
-        <li class="active">Genus: ${ctx.genus} <span class="divider">/</span></li>
-    % endif
-    <li class="active">Species: ${ctx.name}</li>
-</ul>
-% endif
-
 <div style="float: right; margin-top: 10px;">
     ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
 </div>
-
-
 
 <h2>${ctx.description or ctx.name}</h2>
 
@@ -36,14 +19,8 @@
 <table class="table table-condensed table-nonfluid">
     <tbody>
         <tr>
-            <td>Common categories (Eng):</td>
-            <td>
-                <ul class="unstyled">
-                    % for c in ctx.categories:
-                        <li>${c.name}</li>
-                    % endfor
-                </ul>
-            </td>
+            <td>Biological classification:</td>
+            <td>${u.format_classification(ctx, with_species=True, with_rank=True)|n}</td>
         </tr>
         <tr>
             <td>Countries:</td>

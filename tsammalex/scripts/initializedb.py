@@ -148,6 +148,8 @@ def main(args):
     def visitor(lang, data):
         if lang.id in glottolog:
             add_language_codes(data, lang, lang.id, glottolog)
+        if lang.id == 'eng':
+            lang.is_english = True
 
     from_csv(args, models.Languoid, data, visitor=visitor)
     from_csv(args, models.Species, data)
@@ -229,21 +231,25 @@ def prime_cache(args):
     """
     species = models.Species.get('acaciaerioloba')
     deu = models.Languoid.get('deu')
-    for i, cat in enumerate(['Baum', 'Pflanze', 'Akazie']):
-        cat = models.Category(id='deu-%s' % i, name=cat, language=deu)
+    for i, cat in enumerate([('Baum', 'tree'), ('Pflanze', 'plant'), ('Akazie', None)]):
+        cat = models.Category(id='deu-%s' % i, name=cat[0], description=cat[1], language=deu)
         DBSession.add(cat)
         DBSession.flush()
         DBSession.add(models.SpeciesCategory(species_pk=species.pk, category_pk=cat.pk))
 
-    def format_name(v):
-        r = ''
-        if v.description:
-            r = v.description + ': '
-        return r + (v.name or '')
-
     for vs in DBSession.query(common.ValueSet).options(
             joinedload(common.ValueSet.values)):
-        vs.description = '; '.join(nfilter([format_name(v) for v in vs.values]))
+        d = []
+        for generic_term, words in groupby(
+            sorted(vs.values, key=lambda v: v.description), key=lambda v: v.description
+        ):
+            if generic_term:
+                generic_term += ': '
+            else:
+                generic_term = ''
+            d.append(generic_term + ', '.join(nfilter([w.name for w in words])))
+
+        vs.description = '; '.join(d)
 
     with open(args.data_file('classification.json')) as fp:
         sdata = json.load(fp)
@@ -256,6 +262,11 @@ def prime_cache(args):
         orders[species.genus] = 1
 
     eng = models.Languoid.get('eng')
+    for vs in eng.valuesets:
+        for v in vs.values:
+            if v.description:
+                orders[v.description] = 1
+
     for cat in DBSession.query(models.Category):
         if cat.name in orders:
             DBSession.delete(cat)
