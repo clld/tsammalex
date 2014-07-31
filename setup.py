@@ -14,8 +14,6 @@ requires = [
     'transaction',
     'pyramid_tm',
     'zope.sqlalchemy',
-    'gunicorn',
-    'psycopg2',
     'waitress',
     'python-docx',
     ]
