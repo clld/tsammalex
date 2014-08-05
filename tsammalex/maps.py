@@ -1,44 +1,29 @@
 from copy import copy
 
-from clld.web.maps import ParameterMap, Map, Legend, Layer
+from clld.web.maps import ParameterMap, Map, Legend, Layer, FilterLegend
+from clld.web.util.helpers import map_marker_img
 from clld.web.util.htmllib import HTML, literal
-from clld.web.util.helpers import JS
 from clld.db.meta import DBSession
-from clld.db.util import as_int, get_distinct_values
+from clld.db.util import as_int
 
-from tsammalex.models import Biome, Languoid
+from tsammalex.models import Biome
 
 
 OPTIONS = {'show_labels': True, 'icon_size': 20, 'max_zoom': 8}
 
 
-def li(eid, label, checked=False):
-    input_attrs = dict(
-        type='radio',
-        class_='stay-open lineage inline',
-        name='lineage',
-        value=label,
-        onclick=JS("TSAMMALEX.toggle_languages")(eid))
-    if checked:
-        input_attrs['checked'] = 'checked'
-    return HTML.label(
-        HTML.input(**input_attrs),
-        ' ',
-        label,
-        class_='stay-open',
-        style="margin-left:5px; margin-right:5px;",
-    )
-
-
-def lineage_legend(map_):
-    items = [li(map_.eid, '--any--', checked=True)]
-    for l in get_distinct_values(Languoid.lineage):
-        items.append(li(map_.eid, l))
-
-    return Legend(map_, 'lineage', items, stay_open=True)
+class LineageFilter(FilterLegend):
+    def li_label(self, item):
+        if item == '--any--':
+            return item
+        return HTML.span(map_marker_img(self.map.req, item), item)
 
 
 class SpeciesMap(ParameterMap):
+    def __init__(self, ctx, req, eid='map', col=None, dt=None):
+        Map.__init__(self, ctx, req, eid=eid)
+        self.col, self.dt = col, dt
+
     def get_options(self):
         opts = copy(OPTIONS)
         opts['height'] = 300
@@ -46,18 +31,22 @@ class SpeciesMap(ParameterMap):
         return opts
 
     def get_legends(self):
-        yield lineage_legend(self)
+        yield LineageFilter(self, 'TSAMMALEX.getLineage', col=self.col, dt=self.dt)
 
         for legend in super(SpeciesMap, self).get_legends():
             yield legend
 
 
 class LanguoidMap(Map):
+    def __init__(self, ctx, req, eid='map', col=None, dt=None):
+        Map.__init__(self, ctx, req, eid=eid)
+        self.col, self.dt = col, dt
+
     def get_options(self):
         return OPTIONS
 
     def get_legends(self):
-        yield lineage_legend(self)
+        yield LineageFilter(self, 'TSAMMALEX.getLineage', col=self.col, dt=self.dt)
 
         for legend in super(LanguoidMap, self).get_legends():
             yield legend

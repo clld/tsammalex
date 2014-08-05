@@ -19,9 +19,6 @@ def format_classification(species, with_species=False, with_rank=False):
 
 
 class LanguageMultiSelect(MultiSelect):
-    """
-    >>> ms = CombinationMultiSelect(None)
-    """
     def __init__(self, ctx, req, name='languages', eid='ms-languages', **kw):
         kw['selected'] = ctx.languages
         MultiSelect.__init__(self, req, name, eid, **kw)
@@ -45,3 +42,7 @@ def parameter_index_html(context=None, request=None, **kw):
 def language_detail_html(context=None, request=None, **kw):
     return dict(categories=DBSession.query(Unit)
                 .filter(Unit.language == context).order_by(Unit.name))
+
+
+def language_index_html(context=None, request=None, **kw):
+    return dict(map_=request.get_map('languages', col='lineage', dt=context))

@@ -3,6 +3,7 @@
 <%! active_menu_item = "parameters" %>
 <%block name="title">${_('Parameter')} ${ctx.name} (${ctx.description})</%block>
 
+<% dt = request.get_datatable('values', h.models.Value, parameter=ctx) %>
 <% files = [f_ for f_ in ctx._files if f_.name.startswith('small') or f_.name.startswith('large')] %>
 <div style="float: right; margin-top: 10px;">
     ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
@@ -72,10 +73,9 @@
 </table>
     </div>
     <div class="span6">
-        ${request.map.render()}
+        ${request.get_map('parameter', col='lineage', dt=dt).render()}
     </div>
 </div>
-
 
 % for chunk in [files[i:i + 3] for i in range(0, len(files), 3)]:
 <div class="row-fluid" id="images">
@@ -93,13 +93,13 @@
                                 <td>${attr.capitalize()}:</td>
                                 <td>
                                     % if attr == 'permission':
-                        % if value.get('license'):
-                                                                                          ${h.external_link(value['license'][0], value['license'][1])}
-                                    % endif
+                                        % if value.get('license'):
+                                        ${h.external_link(value['license'][0], value['license'][1])}
+                                        % endif
                                     % elif attr == 'source':
-                        ${value|n}
+                                        ${value|n}
                                     % else:
-                        ${value}
+                                        ${value}
                                     % endif
                                 </td>
                             </tr>
@@ -114,5 +114,5 @@
 % endfor
 
 <div id="names">
-${request.get_datatable('values', h.models.Value, parameter=ctx).render()}
+${dt.render()}
 </div>

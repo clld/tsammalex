@@ -6,7 +6,9 @@ from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
 from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
 from clld.web.datatables.language import Languages
-from clld.web.util.helpers import HTML, external_link, linked_references, button, icon
+from clld.web.util.helpers import (
+    HTML, external_link, linked_references, button, icon, map_marker_img,
+)
 from clld.db.util import get_distinct_values, as_int, icontains
 from clld.db.meta import DBSession
 from clld.db.models.common import Parameter, Value, Language, ValueSet
@@ -233,6 +235,18 @@ class MultiCategoriesCol(Col):
         return HTML.ul(*[HTML.li(name) for name in names], class_="unstyled")
 
 
+class LineageCol(Col):
+    def __init__(self, dt, name, **kw):
+        kw['choices'] = get_distinct_values(Languoid.lineage)
+        kw['model_col'] = Languoid.lineage
+        Col.__init__(self, dt, name, **kw)
+
+    def format(self, item):
+        if hasattr(item, 'valueset'):
+            item = item.valueset.language
+        return HTML.span(map_marker_img(self.dt.req, item), item.lineage)
+
+
 class Words(Values):
     def base_query(self, query):
         query = Values.base_query(self, query)
@@ -268,9 +282,7 @@ class Words(Values):
                     self, 'language',
                     model_col=Language.name,
                     get_object=lambda i: i.valueset.language),
-                Col(self, 'lineage',
-                    model_col=Languoid.lineage,
-                    format=lambda i: i.valueset.language.lineage)
+                LineageCol(self, 'lineage'),
             ]
         res.append(LinkCol(self, 'name', sTitle='Word form'))
         res.append(Col(self, 'blt', sTitle='Generic term', model_col=Value.description))
@@ -296,11 +308,7 @@ class Words(Values):
 class Languoids(Languages):
     def col_defs(self):
         res = Languages.col_defs(self)
-        return res[:2] + [
-            Col(self, 'lineage',
-                model_col=Languoid.lineage,
-                choices=get_distinct_values(Languoid.lineage))
-        ] + res[2:]
+        return res[:2] + [LineageCol(self, 'lineage')] + res[2:]
 
 
 class BiomeCol(Col):

@@ -123,7 +123,7 @@ class Word(Value, CustomModelMixin):
                 joinedload_all(cls.valueset, ValueSet.parameter, Species.categories))
 
     def to_csv(self, ctx=None, req=None, cols=None):
-        return [
+        row = [
             self.id,
             self.name,
             self.description,
@@ -144,6 +144,8 @@ class Word(Value, CustomModelMixin):
             ';'.join(cat.id for cat in self.valueset.parameter.categories
                      if cat.language == self.valueset.language),
         ]
+        assert len(row) == len(self.csv_head())
+        return row
 
     @classmethod
     def from_csv(cls, row, data=None, description=None):

@@ -44,26 +44,4 @@ CLLD.LayerOptions.ecoregions = {
     }
 };
 
-TSAMMALEX.toggle_languages = function(eid) {
-    var i, any,
-        ctrl = $('#dt-filter-lineage'),
-        checkboxes = {};
-    $('input.lineage').each(function(i) {checkboxes[$(this).attr('value')] = $(this).prop('checked')});
-
-    any = checkboxes['--any--'];
-
-    CLLD.mapFilterMarkers(eid, function(marker){
-        return any || checkboxes[marker.feature.properties.language.lineage];
-    });
-
-    for (i in checkboxes) {
-        if (checkboxes[i]) {
-            if (i == '--any--') {
-                i = '';
-            }
-            ctrl.val(i);
-            CLLD.DataTables['Languoids'].fnFilter(i, $("thead .control").index(ctrl));
-            //CLLD.DataTables['Langu'].draw();
-        }
-    }
-};
+TSAMMALEX.getLineage = function(properties){return properties.language.lineage};

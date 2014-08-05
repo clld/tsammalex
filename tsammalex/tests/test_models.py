@@ -7,19 +7,22 @@ class Tests(TestWithEnv):
     __with_custom_language__ = False
 
     def test_Word(self):
-        from tsammalex.models import Word, Bibrec, Species
+        from tsammalex.models import Word, Bibrec, Species, Category
 
-        class Data(dict):
-            def add(self, *args, **kw):
-                return
+        #class Data(dict):
+        #    def add(self, *args, **kw):
+        #        return  # pragma: no cover
 
         vs = common.ValueSet(id='vs')
         vs.parameter = Species(id='p')
         vs.language = common.Language(id='l')
-        data = Data(
-            ValueSet={},
+        cat = Category(id='c')
+        vs.parameter.categories.append(cat)
+        data = dict(
+            ValueSet={'p-l': vs},
             Languoid=dict(l=vs.language),
             Species=dict(p=vs.parameter),
+            Category=dict(c=cat),
             Contribution=dict(tsammalex=common.Contribution(id='c')),
             Bibrec={v.id: v for v in DBSession.query(Bibrec)})
         l = Word(id='w', valueset=vs)
@@ -29,6 +32,7 @@ class Tests(TestWithEnv):
         row[14] = 'picker2002[12]'
         Word.from_csv(row, data=data)
         row[14] = 'picker2002'
+        row[15] = 'c'
         Word.from_csv(row, data=data)
         data['ValueSet'] = {'p-l': vs}
         Word.from_csv(row, data=data)
