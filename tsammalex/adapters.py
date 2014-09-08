@@ -94,7 +94,7 @@ class SpeciesDocx(Docx):
                     if attr == 'permission':
                         if value.get('license'):
                             value = value['license'][1]
-                    cells[1].text = value
+                    cells[1].text = '%s' % value
 
             # p = document.add_paragraph('A plain paragraph having some ')
             # p.add_run('bold').bold = True

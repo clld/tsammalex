@@ -150,11 +150,11 @@ def prime_cache(args):
 
         vs.description = '; '.join(d)
 
-    with open(args.data_file('classification.json')) as fp:
-        sdata = json.load(fp)
+    #with open(args.data_file('classification.json')) as fp:
+    #    sdata = json.load(fp)
 
-    for species in DBSession.query(models.Species):
-        update_species_data(species, sdata[species.id])
+    #for species in DBSession.query(models.Species):
+    #    update_species_data(species, sdata[species.id])
 
 
 if __name__ == '__main__':

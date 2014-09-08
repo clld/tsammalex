@@ -8,12 +8,13 @@ from tsammalex.models import Biome, Ecoregion
 
 
 def update_species_data(species, d):
-    for vn in d.get('eol', {}).get('vernacularNames', []):
-        if vn['language'] == 'en' and vn['eol_preferred']:
-            if slug(vn['vernacularName']) != slug(species.description):
-                #print(species.description, '-->', vn['vernacularName'])
-                species.description = vn['vernacularName']
-            break
+    if not species.description:
+        for vn in d.get('eol', {}).get('vernacularNames', []):
+            if vn['language'] == 'en' and vn['eol_preferred']:
+                if slug(vn['vernacularName']) != slug(species.description):
+                    #print(species.description, '-->', vn['vernacularName'])
+                    species.description = vn['vernacularName']
+                break
 
     for an in d.get('eol', {}).get('ancestors', []):
         if not an.get('taxonRank'):
@@ -33,9 +34,9 @@ def update_species_data(species, d):
                     #print(tr, ':', curr, '-->', v)
                     setattr(species, tr, v)
 
-    if species.eol_id and not d.get('eol'):
-        print('eol_id:', species.eol_id, '-->', None)
-        species.eol_id = None
+    #if species.eol_id and not d.get('eol'):
+    #    print('eol_id:', species.eol_id, '-->', None)
+    #    species.eol_id = None
 
 
 def get_center(arr):

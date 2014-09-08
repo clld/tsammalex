@@ -18,7 +18,7 @@ from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
-    ValueSetReference, Unit,
+    ValueSetReference, Unit, HasSourceMixin,
 )
 
 from tsammalex.interfaces import IEcoregion
@@ -213,6 +213,7 @@ class Species(Parameter, CustomModelMixin):
     characteristics = Column(Unicode)
     notes = Column(Unicode)
     eol_id = Column(String)
+    tpl_id = Column(String)
 
     wikipedia_url = Column(String)
 
@@ -228,6 +229,7 @@ class Species(Parameter, CustomModelMixin):
             'notes',
             'wikipedia_url',
             'eol_id',
+            'refs__ids',
             'countries__ids',
             'ecoregions__ids']
 
@@ -238,21 +240,56 @@ class Species(Parameter, CustomModelMixin):
                 return f
 
     @property
+    def tpl_url(self):
+        if self.tpl_id:
+            return 'http://www.theplantlist.org/tpl1.1/record/%s' % self.tpl_id
+
+    @property
     def eol_url(self):
         if self.eol_id:
             return 'http://eol.org/%s' % self.eol_id
+
+    def to_csv(self, ctx=None, req=None, cols=None):
+        row = super(Species, self).to_csv(ctx=ctx, req=req, cols=cols)
+        row[10] = ';'.join(
+                '%s[%s]' % (r.source.id, r.description or '')
+                for r in self.references)
+        return row
 
     @classmethod
     def from_csv(cls, row, data=None):
         obj = super(Species, cls).from_csv(row)
         for index, attr, model in [
-            (10, 'countries', 'Country'), (11, 'ecoregions', 'Ecoregion')
+            (11, 'countries', 'Country'), (12, 'ecoregions', 'Ecoregion')
         ]:
             for id_ in row[index].split(','):
                 if id_:
                     coll = getattr(obj, attr)
                     coll.append(data[model][id_])
+        if row[10]:
+            for i, ref in enumerate(row[10].split(';')):
+                if '[' in ref:
+                    rid, pages = ref.split('[', 1)
+                    try:
+                        assert pages.endswith(']')
+                    except:  # pragma: no cover
+                        print(row[10])
+                        raise
+                    pages = pages[:-1]
+                else:
+                    rid, pages = ref, None
+                data.add(
+                    SpeciesReference, '%s-%s' % (obj.id, i),
+                    species=obj,
+                    source=data['Bibrec'][rid],
+                    description=pages or None)
+
         return obj
+
+
+class SpeciesReference(Base, HasSourceMixin):
+    species_pk = Column(Integer, ForeignKey('species.pk'))
+    species = relationship(Species, backref="references")
 
 
 class SpeciesCountry(Base):

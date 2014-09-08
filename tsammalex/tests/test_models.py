@@ -56,7 +56,7 @@ class Tests(TestWithEnv):
         l2 = Species.from_csv(row)
         self.assertEquals(l2.id, l.id)
 
-        row = ['id', 'name', 'description', None, None, None, None, None, None, None]
+        row = ['id', 'name', 'description', None, None, None, None, None, None, None, None]
         data = {}
         for cls in [Country, Ecoregion]:
             data[cls.mapper_name()] = {}

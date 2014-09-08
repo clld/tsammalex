@@ -26,6 +26,12 @@
             <td>Biological classification:</td>
             <td>${u.format_classification(ctx, with_species=True, with_rank=True)|n}</td>
         </tr>
+            % if ctx.characteristics:
+                <tr>
+                    <td>Characteristics:</td>
+                    <td>${ctx.characteristics}</td>
+                </tr>
+            % endif
         <tr>
             <td>Countries:</td>
             <td>
@@ -66,9 +72,22 @@
             </span>
                         </li>
                     % endif
+                    % if ctx.tpl_url:
+                        <li>
+                <span class="large label label-info">
+                    ${h.external_link(ctx.tpl_url, 'ThePlantList', inverted=True, style="color: white;",)}
+                </span>
+                        </li>
+                    % endif
                 </ul>
             </td>
         </tr>
+        % if ctx.references:
+            <tr>
+                <td>References:</td>
+                <td>${h.linked_references(request, ctx)}</td>
+            </tr>
+        % endif
     </tbody>
 </table>
     </div>
