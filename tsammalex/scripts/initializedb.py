@@ -153,8 +153,14 @@ def prime_cache(args):
     #with open(args.data_file('classification.json')) as fp:
     #    sdata = json.load(fp)
 
-    #for species in DBSession.query(models.Species):
+    for species in DBSession.query(models.Species):
+        species.countries_str = '; '.join([e.name for e in species.countries])
+        species.ecoregions_str = '; '.join([e.name for e in species.ecoregions])
     #    update_species_data(species, sdata[species.id])
+
+    #
+    # TODO: assign ThePlantList ids!
+    #
 
 
 if __name__ == '__main__':

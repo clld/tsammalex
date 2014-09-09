@@ -214,6 +214,8 @@ class Species(Parameter, CustomModelMixin):
     notes = Column(Unicode)
     eol_id = Column(String)
     tpl_id = Column(String)
+    ecoregions_str = Column(Unicode)
+    countries_str = Column(Unicode)
 
     wikipedia_url = Column(String)
 

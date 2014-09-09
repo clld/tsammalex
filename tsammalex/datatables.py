@@ -34,24 +34,6 @@ class ThumbnailCol(Col):
         return ''
 
 
-class CatCol(Col):
-    __spec__ = (None, None)
-
-    def __init__(self, *args, **kw):
-        kw['choices'] = get_distinct_values(self.__spec__[1].name)
-        Col.__init__(self, *args, **kw)
-
-    def format(self, item):
-        return ', '.join(o.name for o in getattr(item, self.__spec__[0]))
-
-    def search(self, qs):
-        return self.__spec__[1].name == qs
-
-
-class CountryCol(CatCol):
-    __spec__ = ('countries', Country)
-
-
 class CategoryCol(Col):
     def __init__(self, dt, name, languages, **kw):
         assert languages
@@ -76,13 +58,12 @@ class CategoryCol(Col):
         return Category.name == qs
 
 
-class EcoregionCol(CatCol):
-    __spec__ = ('ecoregions', Ecoregion)
-
+class EcoregionCol(Col):
     def __init__(self, *args, **kw):
         kw['choices'] = [
             er.name for er in
             DBSession.query(Ecoregion).join(SpeciesEcoregion).order_by(Ecoregion.id)]
+        kw['model_col'] = Species.ecoregions_str
         Col.__init__(self, *args, **kw)
 
 
@@ -141,17 +122,7 @@ class SpeciesTable(Parameters):
             aliased(ValueSet, name='l%s' % i) for i in range(len(self.languages))]
 
     def base_query(self, query):
-        query = query \
-            .outerjoin(SpeciesCountry, SpeciesCountry.species_pk == Parameter.pk) \
-            .outerjoin(Country, SpeciesCountry.country_pk == Country.pk)\
-            .outerjoin(SpeciesEcoregion, SpeciesEcoregion.species_pk == Parameter.pk)\
-            .outerjoin(Ecoregion, SpeciesEcoregion.ecoregion_pk == Ecoregion.pk)\
-            .options(
-                joinedload(Species.categories),
-                joinedload(Species.ecoregions),
-                joinedload(Species.countries),
-                #joinedload(Parameter._files)
-                )
+        query = query.options(joinedload(Species.categories), joinedload(Parameter._files))
         if self.languages:
             for i, lang in enumerate(self.languages):
                 query = query.outerjoin(
@@ -196,7 +167,10 @@ class SpeciesTable(Parameters):
 
         res.extend([
             er_col,
-            CountryCol(self, 'countries', bSortable=False)])
+            Col(self, 'countries',
+                model_col=Species.countries_str,
+                choices=get_distinct_values(Country.name),
+                bSortable=False)])
         # TODO: characteristics col?
         return res
 
