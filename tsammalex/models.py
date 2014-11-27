@@ -36,7 +36,7 @@ ICON_MAP = {
 # -----------------------------------------------------------------------------
 # specialized common mapper classes
 # -----------------------------------------------------------------------------
-class TsammalexEditor(Editor, CustomModelMixin):
+class TsammalexEditor(CustomModelMixin, Editor):
     __csv_name__ = 'editors'
     pk = Column(Integer, ForeignKey('editor.pk'), primary_key=True)
 
@@ -52,7 +52,7 @@ class TsammalexEditor(Editor, CustomModelMixin):
 
 
 @implementer(interfaces.ILanguage)
-class Languoid(Language, CustomModelMixin):
+class Languoid(CustomModelMixin, Language):
     __csv_name__ = 'languages'
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
     lineage = Column(Unicode)
@@ -69,7 +69,7 @@ class Languoid(Language, CustomModelMixin):
 
 
 @implementer(interfaces.ISource)
-class Bibrec(Source, CustomModelMixin):
+class Bibrec(CustomModelMixin, Source):
     __csv_name__ = 'sources'
     pk = Column(Integer, ForeignKey('source.pk'), primary_key=True)
 
@@ -78,7 +78,7 @@ class Bibrec(Source, CustomModelMixin):
 
 
 @implementer(interfaces.IValue)
-class Word(Value, CustomModelMixin):
+class Word(CustomModelMixin, Value):
     """
     name: the word form
     description: the generic term.
@@ -204,7 +204,7 @@ class Word(Value, CustomModelMixin):
 
 
 @implementer(interfaces.IParameter)
-class Species(Parameter, CustomModelMixin):
+class Species(CustomModelMixin, Parameter):
     __csv_name__ = 'species'
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
     family = Column(Unicode)
@@ -401,7 +401,7 @@ class SpeciesCategory(Base):
 
 
 @implementer(interfaces.IUnit)
-class Category(Unit, CustomModelMixin):
+class Category(CustomModelMixin, Unit):
     __csv_name__ = 'categories'
     pk = Column(Integer, ForeignKey('unit.pk'), primary_key=True)
 
