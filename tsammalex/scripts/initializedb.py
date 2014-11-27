@@ -52,12 +52,12 @@ def get_metadata():
     return data, contrib, glottocodes_by_isocode('postgresql://robert@/glottolog3')
 
 
-def from_csv(args, model, data, visitor=None, condition=None, **kw):
+def from_csv(args, model, data, name=None, visitor=None, condition=None, **kw):
     kw.setdefault('delimiter', ',')
     kw.setdefault('lineterminator', str('\r\n'))
     kw.setdefault('quotechar', '"')
-    for row in list(
-            reader(args.data_file('dump', model.__csv_name__ + '.csv'), **kw))[1:]:
+    for row in list(reader(
+            args.data_file('dump', name or model.__csv_name__ + '.csv'), **kw))[1:]:
         if condition and not condition(row):
             continue
         obj = data.add(model, row[0], _obj=model.from_csv(row, data))
@@ -76,6 +76,8 @@ def main(args):
         args, models.Bibrec, data, condition=lambda row: row[0] not in data['Bibrec'])
 
     load_ecoregions(args, data)
+    from_csv(args, models.TsammalexContributor, data)
+    from_csv(args, models.TsammalexEditor, data)
 
     def visitor(lang, data):
         if lang.id in glottolog:
@@ -84,11 +86,12 @@ def main(args):
             lang.is_english = True
 
     from_csv(args, models.Languoid, data, visitor=visitor)
-    for model in [
-        models.Country,
-        models.Category,
-    ]:
-        from_csv(args, model, data)
+    from_csv(args, models.Country, data)
+    from_csv(args, models.Category, data, name='categories')
+
+    def habitat_visitor(cat, data):
+        cat.is_habitat = True
+    from_csv(args, models.Category, data, name='habitats', visitor=habitat_visitor)
 
     from_csv(args, models.Species, data)
 
