@@ -9,6 +9,8 @@ from sqlalchemy import (
     ForeignKey,
     Float,
     Boolean,
+    true,
+    false,
 )
 from sqlalchemy.orm import relationship, backref, joinedload_all
 from sqlalchemy.ext.declarative import declared_attr
@@ -18,7 +20,7 @@ from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
-    ValueSetReference, Unit, HasSourceMixin,
+    ValueSetReference, Unit, HasSourceMixin, Contributor,
 )
 
 from tsammalex.interfaces import IEcoregion
@@ -36,23 +38,34 @@ ICON_MAP = {
 # -----------------------------------------------------------------------------
 # specialized common mapper classes
 # -----------------------------------------------------------------------------
-class TsammalexEditor(Editor, CustomModelMixin):
+class TsammalexContributor(CustomModelMixin, Contributor):
+    __csv_name__ = 'contributors'
+    # -> id
+    # names, sections, affiliation -> address, research_project, homepage -> url,
+    # notes -> description
+    pk = Column(Integer, ForeignKey('contributor.pk'), primary_key=True)
+    sections = Column(Unicode)
+    research_project = Column(Unicode)
+
+
+class TsammalexEditor(CustomModelMixin, Editor):
     __csv_name__ = 'editors'
     pk = Column(Integer, ForeignKey('editor.pk'), primary_key=True)
+    sections = Column(Unicode)
 
     def csv_head(self):
-        return ['ord', 'name']
+        return ['ord', 'contributor__id', 'sections']
 
     def to_csv(self, ctx=None, req=None, cols=None):
-        return [self.ord, self.contributor.name]
+        return [self.ord, self.contributor.id, self.sections]
 
     @classmethod
     def from_csv(cls, row, data=None):
-        return cls(ord=int(row[0] or 1), contributor=data['TsammalexEditor'][row[1]])
+        return cls(ord=int(row[0] or 1), contributor=data['TsammalexContributor'][row[1]])
 
 
 @implementer(interfaces.ILanguage)
-class Languoid(Language, CustomModelMixin):
+class Languoid(CustomModelMixin, Language):
     __csv_name__ = 'languages'
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
     lineage = Column(Unicode)
@@ -69,7 +82,7 @@ class Languoid(Language, CustomModelMixin):
 
 
 @implementer(interfaces.ISource)
-class Bibrec(Source, CustomModelMixin):
+class Bibrec(CustomModelMixin, Source):
     __csv_name__ = 'sources'
     pk = Column(Integer, ForeignKey('source.pk'), primary_key=True)
 
@@ -78,7 +91,7 @@ class Bibrec(Source, CustomModelMixin):
 
 
 @implementer(interfaces.IValue)
-class Word(Value, CustomModelMixin):
+class Word(CustomModelMixin, Value):
     """
     name: the word form
     description: the generic term.
@@ -204,7 +217,7 @@ class Word(Value, CustomModelMixin):
 
 
 @implementer(interfaces.IParameter)
-class Species(Parameter, CustomModelMixin):
+class Species(CustomModelMixin, Parameter):
     __csv_name__ = 'species'
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
     family = Column(Unicode)
@@ -401,12 +414,22 @@ class SpeciesCategory(Base):
 
 
 @implementer(interfaces.IUnit)
-class Category(Unit, CustomModelMixin):
-    __csv_name__ = 'categories'
+class Category(CustomModelMixin, Unit):
     pk = Column(Integer, ForeignKey('unit.pk'), primary_key=True)
+    notes = Column(Unicode)
+    is_habitat = Column(Boolean, default=False)
+
+    @classmethod
+    def csv_query(cls, session, type_=None):
+        query = Unit.csv_query(session)
+        if type_ == 'categories':
+            query = query.filter(cls.is_habitat == false())
+        elif type == 'habitats':
+            query = query.filter(cls.is_habitat == true())
+        return query
 
     def csv_head(self):
-        return ['id', 'name', 'description', 'language__id']
+        return ['id', 'name', 'description', 'language__id', 'notes']
 
     @declared_attr
     def species(cls):
