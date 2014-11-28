@@ -4,28 +4,29 @@ from __future__ import unicode_literals, division, absolute_import, print_functi
 import sys
 import json
 from itertools import groupby
+from functools import partial
+import re
 
 from sqlalchemy.orm import joinedload
-from path import path
 from clld.scripts.util import (
     initializedb, Data, bibtex2source, glottocodes_by_isocode, add_language_codes,
 )
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib.dsv import reader
-from clld.util import nfilter, slug
+from clld.lib.imeji import file_urls
+from clld.lib.bibtex import Database
+from clld.util import nfilter
 
 from tsammalex import models
-from tsammalex.scripts import wiki
-from tsammalex.scripts.util import update_species_data, load_ecoregions
+from tsammalex.scripts.util import (
+    update_species_data, load_ecoregions, from_csv, SOURCE_MAP,
+)
 
 
-files_dir = path('/home/robert/venvs/clld/tsammalex/data/files')
-
-
-def get_metadata():
+def main(args):
     data = Data()
-    dataset = common.Dataset(
+    data.add(common.Dataset, 'tsammalex',
         id="tsammalex",
         name="Tsammalex",
         description="A lexical database on plants and animals (preliminary version)",
@@ -33,47 +34,22 @@ def get_metadata():
         publisher_place="Leipzig",
         publisher_url="http://www.eva.mpg.de",
         domain='tsammalex.clld.org',
-        license='http://creativecommons.org/licenses/by/3.0/',
+        license='http://creativecommons.org/licenses/by/4.0/',
         contact='naumann@eva.mpg.de',
         jsondata={
             'license_icon': 'cc-by.png',
-            'license_name': 'Creative Commons Attribution 3.0 Unported License'})
-    DBSession.add(dataset)
+            'license_name': 'Creative Commons Attribution 4.0 International License'})
+    data.add(common.Contribution, 'tsammalex', name="Tsammalex", id="tsammalex")
+    glottolog = glottocodes_by_isocode('postgresql://robert@/glottolog3')
 
-    for i, spec in enumerate([
-            ('naumann', "Christfried Naumann"),
-            ('forkel', 'Robert Forkel')]):
-        DBSession.add(common.Editor(
-            dataset=dataset,
-            ord=i + 1,
-            contributor=common.Contributor(id=spec[0], name=spec[1])))
-
-    contrib = data.add(common.Contribution, 'tsammalex', name="Tsammalex", id="tsammalex")
-    return data, contrib, glottocodes_by_isocode('postgresql://robert@/glottolog3')
-
-
-def from_csv(args, model, data, name=None, visitor=None, condition=None, **kw):
-    kw.setdefault('delimiter', ',')
-    kw.setdefault('lineterminator', str('\r\n'))
-    kw.setdefault('quotechar', '"')
-    for row in list(reader(
-            args.data_file('dump', name or model.__csv_name__ + '.csv'), **kw))[1:]:
-        if condition and not condition(row):
-            continue
-        obj = data.add(model, row[0], _obj=model.from_csv(row, data))
-        if visitor:
-            visitor(obj, data)
-
-
-def main(args):
-    data, contrib, glottolog = get_metadata()
-
-    refs = wiki.get_refs(args)
-    for rec in refs.records:
-        data.add(models.Bibrec, rec.id, _obj=bibtex2source(rec, cls=models.Bibrec))
-
-    from_csv(
-        args, models.Bibrec, data, condition=lambda row: row[0] not in data['Bibrec'])
+    source_map = {v: k for k, v in SOURCE_MAP.items()}
+    refs = Database.from_file(args.data_file('dump', 'TsammalexSources.bib'))
+    for rec in refs:
+        if rec.id in source_map:
+            data.add(
+                models.Bibrec,
+                source_map[rec.id],
+                _obj=bibtex2source(rec, cls=models.Bibrec))
 
     load_ecoregions(args, data)
     from_csv(args, models.TsammalexContributor, data)
@@ -93,21 +69,36 @@ def main(args):
         cat.is_habitat = True
     from_csv(args, models.Category, data, name='habitats', visitor=habitat_visitor)
 
-    from_csv(args, models.Species, data)
+    with open(args.data_file('classification.json')) as fp:
+        sdata = json.load(fp)
 
+    def species_visitor(sdata, species, data):
+        species.countries_str = '; '.join([e.name for e in species.countries])
+        species.ecoregions_str = '; '.join([e.name for e in species.ecoregions])
+        if species.id in sdata:
+            update_species_data(species, sdata[species.id])
+
+    from_csv(args, models.Species, data, visitor=partial(species_visitor, sdata))
+
+    edmond_urls = file_urls(args.data_file('dump', 'Edmond.xml'))
+    type_pattern = re.compile('\-(large|small)\.')
     for image in reader(
             args.data_file('dump', 'images.csv'),
             namedtuples=True,
             delimiter=",",
-            lineterminator='\r\n'
+            #lineterminator='\r\n'
     ):
-        #
-        # TODO: respect flags thumbnail1 and thumbnail2!
-        #
-        # id,species_id,name,mime_type,src,width,height,author,date,place,comments,
+        if '-thumbnail' in image.id:
+            continue
+
+        id_ = type_pattern.sub('.', image.id)
+        if id_ not in edmond_urls:
+            print('not uploaded? --> %s' % id_)
+            continue
+
         # keywords,permission
-        jsondata = dict(width=int(image.width), height=int(image.height))
-        for k in 'src author date place comments keywords permission'.split():
+        jsondata = edmond_urls[id_]
+        for k in 'src creator date place comments permission'.split():
             v = getattr(image, k)
             if v:
                 if k == 'permission':
@@ -121,14 +112,15 @@ def main(args):
                     jsondata[k] = v
         f = common.Parameter_files(
             object=data['Species'][image.species_id],
-            id=image.id,
-            name=image.name,
+            id=id_,
+            name=image.tags,
             jsondata=jsondata,
             mime_type=image.mime_type)
         assert f
         #
         # TODO: handle new images!?
         #
+        # upload to edmond, get url back!
         # f.create(files_dir, wiki.get(args, img[n]['src'], html=False))
 
     from_csv(args, models.Word, data)
@@ -152,14 +144,6 @@ def prime_cache(args):
             d.append(generic_term + ', '.join(nfilter([w.name for w in words])))
 
         vs.description = '; '.join(d)
-
-    #with open(args.data_file('classification.json')) as fp:
-    #    sdata = json.load(fp)
-
-    for species in DBSession.query(models.Species):
-        species.countries_str = '; '.join([e.name for e in species.countries])
-        species.ecoregions_str = '; '.join([e.name for e in species.ecoregions])
-    #    update_species_data(species, sdata[species.id])
 
     #
     # TODO: assign ThePlantList ids!

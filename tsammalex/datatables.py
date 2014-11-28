@@ -30,7 +30,7 @@ class ThumbnailCol(Col):
     def format(self, item):
         item = self.get_obj(item)
         if item.thumbnail:
-            return HTML.img(src=self.dt.req.file_url(item.thumbnail))
+            return HTML.img(src=item.thumbnail)
         return ''
 
 

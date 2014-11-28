@@ -9,7 +9,7 @@ from tsammalex.models import Languoid
 
 
 def format_classification(species, with_species=False, with_rank=False):
-    names = [(r, getattr(species, r)) for r in 'order family genus'.split()]
+    names = [(r, getattr(species, r)) for r in 'kingdom order family genus'.split()]
     if with_species:
         names.append(('species', species.name))
     return HTML.ul(

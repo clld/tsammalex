@@ -4,7 +4,6 @@
 <%block name="title">${_('Parameter')} ${ctx.name} (${ctx.description})</%block>
 
 <% dt = request.get_datatable('values', h.models.Value, parameter=ctx) %>
-<% files = [f_ for f_ in ctx._files if f_.name.startswith('small') or f_.name.startswith('large')] %>
 <div style="float: right; margin-top: 10px;">
     ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
 </div>
@@ -15,7 +14,7 @@
     <div class="span6">
 <ul class="nav nav-pills">
     <li class="active"><a href="#map-container"><span class="icon-globe"> </span> Map</a></li>
-    % if files:
+    % if ctx._files:
         <li class="active"><a href="#images"><span class="icon-camera"> </span> Pictures</a></li>
     % endif
     <li class="active"><a href="#names"><span class="icon-list"> </span> Names</a></li>
@@ -96,7 +95,7 @@
     </div>
 </div>
 
-% for chunk in [files[i:i + 3] for i in range(0, len(files), 3)]:
+% for chunk in [ctx._files[i:i + 3] for i in range(0, len(ctx._files), 3)]:
 <div class="row-fluid" id="images">
     % for f in chunk:
         <div class="span4">

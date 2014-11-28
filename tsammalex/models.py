@@ -47,6 +47,9 @@ class TsammalexContributor(CustomModelMixin, Contributor):
     sections = Column(Unicode)
     research_project = Column(Unicode)
 
+    def csv_head(self):
+        return 'id,name,sections,address,research_project,url,description'.split(',')
+
 
 class TsammalexEditor(CustomModelMixin, Editor):
     __csv_name__ = 'editors'
@@ -61,7 +64,10 @@ class TsammalexEditor(CustomModelMixin, Editor):
 
     @classmethod
     def from_csv(cls, row, data=None):
-        return cls(ord=int(row[0] or 1), contributor=data['TsammalexContributor'][row[1]])
+        return cls(
+            ord=int(row[0] or 1),
+            dataset=list(data['Dataset'].values())[0],
+            contributor=data['TsammalexContributor'][row[1]])
 
 
 @implementer(interfaces.ILanguage)
@@ -120,11 +126,11 @@ class Word(CustomModelMixin, Value):
             'grammatical_info',
             'notes',
             'comment',
-            'source__id',
-            'language__id',
-            'species__id',
-            'refs__ids',
-            'categories__ids',
+            'language__id',  # 11
+            'species__id',  # 12
+            'refs__ids',  # 13
+            'source__id',  # 14
+            'categories__ids',  # 15
         ]
 
     @classmethod
@@ -148,12 +154,12 @@ class Word(CustomModelMixin, Value):
             self.grammatical_info,
             self.notes,
             self.comment,
-            self.valueset.source or '',
             self.valueset.language.id,
             self.valueset.parameter.id,
             ';'.join(
                 '%s[%s]' % (r.source.id, r.description or '')
                 for r in self.valueset.references),
+            self.valueset.source or '',
             ';'.join(cat.id for cat in self.valueset.parameter.categories
                      if cat.language == self.valueset.language),
         ]
@@ -175,29 +181,34 @@ class Word(CustomModelMixin, Value):
             notes=row[9],
             comment=row[10],
         )
-        sid = row[13]
-        lid = row[12]
+        sid = row[12]
+        lid = row[11]
         vsid = '%s-%s' % (sid, lid)
         if vsid in data['ValueSet']:
             vs = data['ValueSet'][vsid]
         else:
             # Note: source and references are dumped redundantly with each word, so we
             # only have to recreate these if a new ValueSet had to be created.
-            vs = data.add(
-                ValueSet, vsid,
-                id=vsid,
-                source=row[11] or None,
-                parameter=data['Species'][sid],
-                language=data['Languoid'][lid],
-                contribution=data['Contribution']['tsammalex'])
-            if row[14]:
-                for i, ref in enumerate(row[14].split(';')):
+            try:
+                vs = data.add(
+                    ValueSet, vsid,
+                    id=vsid,
+                    source=row[14] or None,
+                    parameter=data['Species'][sid],
+                    language=data['Languoid'][lid],
+                    contribution=data['Contribution']['tsammalex'])
+            except KeyError:
+                print(sid)
+                print(lid)
+                return
+            if row[13]:
+                for i, ref in enumerate(row[13].split(';')):
                     if '[' in ref:
                         rid, pages = ref.split('[', 1)
                         try:
                             assert pages.endswith(']')
                         except:  # pragma: no cover
-                            print(row[14])
+                            print(row[13])
                             raise
                         pages = pages[:-1]
                     else:
@@ -220,10 +231,14 @@ class Word(CustomModelMixin, Value):
 class Species(CustomModelMixin, Parameter):
     __csv_name__ = 'species'
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
+    english_name = Column(Unicode)  # , nullable=False)
     family = Column(Unicode)
     genus = Column(Unicode)
     order = Column(Unicode)
+    kingdom = Column(Unicode)
     characteristics = Column(Unicode)
+    biotope = Column(Unicode)
+    general_uses = Column(Unicode)
     notes = Column(Unicode)
     eol_id = Column(String)
     tpl_id = Column(String)
@@ -231,28 +246,43 @@ class Species(CustomModelMixin, Parameter):
     countries_str = Column(Unicode)
 
     wikipedia_url = Column(String)
+    links = Column(Unicode)
 
     def csv_head(self):
+        #id,scientific_name,species_description,english_name,kingdom,order,family,genus,characteristics,
+        # biotope,ecoregions__ids,countries__ids,general_uses,notes,refs__ids,
+        # wikipedia_url,eol_id,links
+
         return [
             'id',
             'name',
             'description',
+
+            'english_name',
+            'kingdom',
+
             'order',
             'family',
             'genus',
             'characteristics',
+
+            'biotope',
+            'ecoregions__ids',  # 10
+            'countries__ids',  # 11
+            'general_uses',  # ?
+
+
             'notes',
+            'refs__ids',  # 14
             'wikipedia_url',
             'eol_id',
-            'refs__ids',
-            'countries__ids',
-            'ecoregions__ids']
+            'links']
 
     @reify
     def thumbnail(self):
         for f in self._files:
-            if f.name.startswith('thumbnail'):
-                return f
+            if 1:  # todo: check tags!
+                return f.jsondatadict['thumbnail']
 
     @property
     def tpl_url(self):
@@ -266,7 +296,7 @@ class Species(CustomModelMixin, Parameter):
 
     def to_csv(self, ctx=None, req=None, cols=None):
         row = super(Species, self).to_csv(ctx=ctx, req=req, cols=cols)
-        row[10] = ';'.join(
+        row[14] = ';'.join(
                 '%s[%s]' % (r.source.id, r.description or '')
                 for r in self.references)
         return row
@@ -275,22 +305,26 @@ class Species(CustomModelMixin, Parameter):
     def from_csv(cls, row, data=None):
         obj = super(Species, cls).from_csv(row)
         for index, attr, model in [
-            (11, 'countries', 'Country'), (12, 'ecoregions', 'Ecoregion')
+            (11, 'countries', 'Country'), (10, 'ecoregions', 'Ecoregion')
         ]:
             for id_ in row[index].split(','):
                 if id_:
-                    coll = getattr(obj, attr)
-                    coll.append(data[model][id_])
-        if row[10]:
-            for i, ref in enumerate(row[10].split(';')):
+                    if id_ in data[model]:
+                        coll = getattr(obj, attr)
+                        coll.append(data[model][id_])
+                    else:
+                        print('unknown %s: %s' % (model, id_))
+        if row[14]:
+            for i, ref in enumerate(row[14].split(';')):
                 if '[' in ref:
                     rid, pages = ref.split('[', 1)
                     try:
                         assert pages.endswith(']')
+                        pages = pages[:-1]
                     except:  # pragma: no cover
-                        print(row[10])
-                        raise
-                    pages = pages[:-1]
+                        print(row[14])
+                        #raise
+                    #pages = pages[:-1]
                 else:
                     rid, pages = ref, None
                 data.add(
