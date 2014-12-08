@@ -1,4 +1,5 @@
 from __future__ import unicode_literals, print_function, absolute_import, division
+import re
 
 from zope.interface import implementer
 from sqlalchemy import (
@@ -20,24 +21,34 @@ from clld import interfaces
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
-    ValueSetReference, Unit, HasSourceMixin, Contributor,
+    Unit, HasSourceMixin, Contributor,
 )
 
 from tsammalex.interfaces import IEcoregion
 
 
-ICON_MAP = {
-    'Bantu': 'ffff00',
-    'Khoe': '00ffff',
-    'Tuu': '66ff33',
-    "Kx'a": '990099',
-    'Germanic': 'dd0000',
-}
+ID_SEP_PATTERN = re.compile('\.|,|;')
 
 
 # -----------------------------------------------------------------------------
 # specialized common mapper classes
 # -----------------------------------------------------------------------------
+class Lineage(Base, IdNameDescriptionMixin):
+    __csv_name__ = 'lineages'
+    glottocode = Column(String)
+    color = Column(String, default='ff6600')
+
+    def csv_head(self):
+        return ['id', 'name', 'description', 'glottocode', 'color']
+
+
+class Use(Base, IdNameDescriptionMixin):
+    __csv_name__ = 'uses'
+
+    def csv_head(self):
+        return ['id', 'name', 'description']
+
+
 class TsammalexContributor(CustomModelMixin, Contributor):
     __csv_name__ = 'contributors'
     # -> id
@@ -48,43 +59,63 @@ class TsammalexContributor(CustomModelMixin, Contributor):
     research_project = Column(Unicode)
 
     def csv_head(self):
-        return 'id,name,sections,address,research_project,url,description'.split(',')
+        return 'id,name,editor_ord,editor_sections,sections,address,research_project,url,description'.split(',')
 
+    @property
+    def notes(self):
+        return self.description
 
-class TsammalexEditor(CustomModelMixin, Editor):
-    __csv_name__ = 'editors'
-    pk = Column(Integer, ForeignKey('editor.pk'), primary_key=True)
-    sections = Column(Unicode)
+    @notes.setter
+    def notes(self, value):
+        self.description = value
 
-    def csv_head(self):
-        return ['ord', 'contributor__id', 'sections']
+    @property
+    def affiliation(self):
+        return self.address
 
-    def to_csv(self, ctx=None, req=None, cols=None):
-        return [self.ord, self.contributor.id, self.sections]
+    @affiliation.setter
+    def affiliation(self, value):
+        self.address = value
 
     @classmethod
     def from_csv(cls, row, data=None):
-        return cls(
-            ord=int(row[0] or 1),
-            dataset=list(data['Dataset'].values())[0],
-            contributor=data['TsammalexContributor'][row[1]])
+        obj = super(TsammalexContributor, cls).from_csv(row)
+        if row[3]:
+            data.add(
+                TsammalexEditor, row[0],
+                ord=int(row[3]),
+                dataset=data['Dataset']['tsammalex'],
+                contributor=obj,
+                sections=row[4])
+        return obj
+
+
+class TsammalexEditor(CustomModelMixin, Editor):
+    pk = Column(Integer, ForeignKey('editor.pk'), primary_key=True)
+    sections = Column(Unicode)
 
 
 @implementer(interfaces.ILanguage)
 class Languoid(CustomModelMixin, Language):
     __csv_name__ = 'languages'
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
-    lineage = Column(Unicode)
-    is_english = Column(Boolean, default=False)
+    lineage_pk = Column(Integer, ForeignKey('lineage.pk'))
+    lineage = relationship(Lineage, backref='languoids')
 
     def csv_head(self):
         return [
             'id',
             'name',
-            'lineage',
+            'lineage__id',
             'description',
             'latitude',
             'longitude']
+
+    @classmethod
+    def from_csv(cls, row, data=None):
+        obj = super(Languoid, cls).from_csv(row)
+        obj.lineage = data['Lineage'][row[2]]
+        return obj
 
 
 @implementer(interfaces.ISource)
@@ -96,42 +127,131 @@ class Bibrec(CustomModelMixin, Source):
         return ['id', 'name', 'description']
 
 
+class NameUse(Base):
+    name_pk = Column(Integer, ForeignKey('name.pk'))
+    use_pk = Column(Integer, ForeignKey('use.pk'))
+
+
+class NameCategory(Base):
+    name_pk = Column(Integer, ForeignKey('name.pk'))
+    category_pk = Column(Integer, ForeignKey('category.pk'))
+
+
+class NameHabitat(Base):
+    name_pk = Column(Integer, ForeignKey('name.pk'))
+    category_pk = Column(Integer, ForeignKey('category.pk'))
+
+
+@implementer(interfaces.IUnit)
+class Category(CustomModelMixin, Unit):
+    pk = Column(Integer, ForeignKey('unit.pk'), primary_key=True)
+    notes = Column(Unicode)
+    is_habitat = Column(Boolean, default=False)
+
+    @property
+    def meaning(self):
+        return self.description
+
+    @meaning.setter
+    def meaning(self, value):
+        self.description = value
+
+    @classmethod
+    def csv_query(cls, session, type_=None):
+        query = Unit.csv_query(session)
+        if type_ == 'categories':
+            query = query.filter(cls.is_habitat == false())
+        elif type == 'habitats':
+            query = query.filter(cls.is_habitat == true())
+        return query
+
+    def csv_head(self):
+        return ['id', 'name', 'description', 'language__id', 'notes']
+
+    @classmethod
+    def from_csv(cls, row, data=None):
+        obj = super(Category, cls).from_csv(row)
+        obj.language = data['Languoid'][row[3]]
+        return obj
+
+
 @implementer(interfaces.IValue)
-class Word(CustomModelMixin, Value):
+class Name(CustomModelMixin, Value):
     """
+    A name for a species in a particular language.
+
     name: the word form
-    description: the generic term.
     """
-    __csv_name__ = 'words'
+    __csv_name__ = 'names'
+    __csv_head__ = [
+        'id',
+        'name',
+        'language__id',  # 2
+        'species__id',  # 3
+        'ipa',
+        'audio',  # will be removed!
+        'grammatical_info',
+        'plural_form',
+        'stem',
+        'root',
+        'basic_term',
+        'meaning',  # -> description
+        'literal_translation',
+        'usage',
+        'source_language',
+        'source_form',
+        'linguistic_notes',
+        'related_lexemes',
+        'categories__ids',
+        'habitats__ids',
+        'introduced',
+        'uses__ids',
+        'importance',
+        'associations',
+        'ethnobiological_notes',
+        'comment',
+        'source',
+        'refs__ids',
+        'original_source',
+    ]
+
     pk = Column(Integer, ForeignKey('value.pk'), primary_key=True)
+
+    ipa = Column(Unicode)
+    grammatical_info = Column(Unicode)
     plural_form = Column(Unicode)
     stem = Column(Unicode)
     root = Column(Unicode)
-    meaning = Column(Unicode)
-    phonetic = Column(Unicode)
-    grammatical_info = Column(Unicode)
-    notes = Column(Unicode)
+    basic_term = Column(Unicode)
+    literal_translation = Column(Unicode)
+    usage = Column(Unicode)
+    source_language = Column(Unicode)
+    source_form = Column(Unicode)
+    linguistic_notes = Column(Unicode)
+    related_lexemes = Column(Unicode)
+    introduced = Column(Unicode)
+    importance = Column(Unicode)
+    associations = Column(Unicode)
+    ethnobiological_notes = Column(Unicode)
+
     comment = Column(Unicode)
+    source = Column(Unicode)
+    original_source = Column(Unicode)
+
+    categories = relationship(Category, secondary=NameCategory.__table__)
+    habitats = relationship(Category, secondary=NameHabitat.__table__)
+    uses = relationship(Use, secondary=NameUse.__table__)
+
+    @property
+    def meaning(self):
+        return self.description
+
+    @meaning.setter
+    def meaning(self, value):
+        self.description = value
 
     def csv_head(self):
-        return [
-            'id',
-            'name',
-            'generic_term',
-            'plural_form',
-            'stem',
-            'root',
-            'meaning',
-            'phonetic',
-            'grammatical_info',
-            'notes',
-            'comment',
-            'language__id',  # 11
-            'species__id',  # 12
-            'refs__ids',  # 13
-            'source__id',  # 14
-            'categories__ids',  # 15
-        ]
+        return self.__csv_head__
 
     @classmethod
     def csv_query(cls, session):
@@ -139,92 +259,86 @@ class Word(CustomModelMixin, Value):
             .join(ValueSet).join(Language).order_by(Language.id, cls.name, cls.id)\
             .options(
                 joinedload_all(cls.valueset, ValueSet.language),
-                joinedload_all(cls.valueset, ValueSet.parameter, Species.categories))
+                joinedload_all(cls.valueset, ValueSet.parameter))
 
     def to_csv(self, ctx=None, req=None, cols=None):
-        row = [
-            self.id,
-            self.name,
-            self.description,
-            self.plural_form,
-            self.stem,
-            self.root,
-            self.meaning,
-            self.phonetic,
-            self.grammatical_info,
-            self.notes,
-            self.comment,
-            self.valueset.language.id,
-            self.valueset.parameter.id,
-            ';'.join(
-                '%s[%s]' % (r.source.id, r.description or '')
-                for r in self.valueset.references),
-            self.valueset.source or '',
-            ';'.join(cat.id for cat in self.valueset.parameter.categories
-                     if cat.language == self.valueset.language),
-        ]
-        assert len(row) == len(self.csv_head())
+        row = []
+        for col in self.csv_head():
+            if '__' in col:
+                name, cardinality = col.split('__', 1)
+                val = ''
+                if name == 'language':
+                    val = self.valueset.language.id
+                elif name == 'species':
+                    val = self.valueset.parameter.id
+                elif name in ['categories', 'habitats', 'uses']:
+                    val = ';'.join(obj.id for obj in getattr(self, name))
+                elif name == 'refs':
+                    val = ';'.join(
+                        '%s[%s]' % (r.source.id, r.description or '')
+                        for r in self.references)
+            elif col == 'audio':
+                val = ''
+            else:
+                val = getattr(self, col)
+            row.append(val)
         return row
 
     @classmethod
     def from_csv(cls, row, data=None, description=None):
-        obj = cls(
-            id=row[0],
-            name=row[1],
-            description=row[2],
-            plural_form=row[3],
-            stem=row[4],
-            root=row[5],
-            meaning=row[6],
-            phonetic=row[7],
-            grammatical_info=row[8],
-            notes=row[9],
-            comment=row[10],
-        )
-        sid = row[12]
-        lid = row[11]
+        obj = cls(**{n: row[i] for i, n in enumerate(cls.__csv_head__) if '__' not in n and n != 'audio'})
+
+        row = dict(zip(cls.__csv_head__, row))
+        sid = row['species__id']
+        lid = row['language__id']
         vsid = '%s-%s' % (sid, lid)
         if vsid in data['ValueSet']:
-            vs = data['ValueSet'][vsid]
+            obj.valueset = data['ValueSet'][vsid]
         else:
             # Note: source and references are dumped redundantly with each word, so we
             # only have to recreate these if a new ValueSet had to be created.
-            try:
-                vs = data.add(
-                    ValueSet, vsid,
-                    id=vsid,
-                    source=row[14] or None,
-                    parameter=data['Species'][sid],
-                    language=data['Languoid'][lid],
-                    contribution=data['Contribution']['tsammalex'])
-            except KeyError:
-                print(sid)
-                print(lid)
-                return
-            if row[13]:
-                for i, ref in enumerate(row[13].split(';')):
-                    if '[' in ref:
-                        rid, pages = ref.split('[', 1)
-                        try:
-                            assert pages.endswith(']')
-                        except:  # pragma: no cover
-                            print(row[13])
-                            raise
-                        pages = pages[:-1]
-                    else:
-                        rid, pages = ref, None
-                    data.add(
-                        ValueSetReference, '%s-%s' % (obj.id, i),
-                        valueset=vs,
-                        source=data['Bibrec'][rid],
-                        description=pages or None)
-        obj.valueset = vs
-        if row[15]:
-            cats = [cat.id for cat in vs.parameter.categories]
-            for catid in set(row[15].split(';')):
-                if catid not in cats:
-                    vs.parameter.categories.append(data['Category'][catid])
+            obj.valueset = data.add(
+                ValueSet, vsid,
+                id=vsid,
+                parameter=data['Species'][sid],
+                language=data['Languoid'][lid],
+                contribution=data['Contribution']['tsammalex'])
+
+        if row['refs__ids']:
+            for i, ref in enumerate(row['refs__ids'].split(';')):
+                if '[' in ref:
+                    rid, pages = ref.split('[', 1)
+                    try:
+                        assert pages.endswith(']')
+                    except:  # pragma: no cover
+                        print(row['refs__ids'])
+                        raise
+                    pages = pages[:-1]
+                else:
+                    rid, pages = ref, None
+                data.add(
+                    NameReference, '%s-%s' % (obj.id, i),
+                    name=obj,
+                    source=data['Bibrec'][rid],
+                    description=pages or None)
+        for rel, cls in [
+            ('categories', 'Category'),
+            ('habitats', 'Category'),
+            ('uses', 'Use')
+        ]:
+            if row[rel + '__ids']:
+                for id_ in set(ID_SEP_PATTERN.split(row[rel + '__ids'])):
+                    if id_.strip():
+                        getattr(obj, rel).append(data[cls][id_.strip()])
         return obj
+
+
+class NameReference(Base, HasSourceMixin):
+    name_pk = Column(Integer, ForeignKey('name.pk'))
+
+    @declared_attr
+    def name(self):
+        return relationship(Name, backref='references')
 
 
 @implementer(interfaces.IParameter)
@@ -248,6 +362,22 @@ class Species(CustomModelMixin, Parameter):
     wikipedia_url = Column(String)
     links = Column(Unicode)
 
+    @property
+    def scientific_name(self):
+        return self.name
+
+    @scientific_name.setter
+    def scientific_name(self, value):
+        self.name = value
+
+    @property
+    def species_description(self):
+        return self.description
+
+    @species_description.setter
+    def species_description(self, value):
+        self.description = value
+
     def csv_head(self):
         #id,scientific_name,species_description,english_name,kingdom,order,family,genus,characteristics,
         # biotope,ecoregions__ids,countries__ids,general_uses,notes,refs__ids,
@@ -255,17 +385,14 @@ class Species(CustomModelMixin, Parameter):
 
         return [
             'id',
-            'name',
-            'description',
-
+            'scientific_name',
+            'species_description',
             'english_name',
             'kingdom',
-
             'order',
             'family',
             'genus',
             'characteristics',
-
             'biotope',
             'ecoregions__ids',  # 10
             'countries__ids',  # 11
@@ -307,11 +434,11 @@ class Species(CustomModelMixin, Parameter):
         for index, attr, model in [
             (11, 'countries', 'Country'), (10, 'ecoregions', 'Ecoregion')
         ]:
-            for id_ in row[index].split(','):
-                if id_:
+            for id_ in ID_SEP_PATTERN.split(row[index]):
+                if id_.strip():
                     if id_ in data[model]:
                         coll = getattr(obj, attr)
-                        coll.append(data[model][id_])
+                        coll.append(data[model][id_.strip()])
                     else:
                         print('unknown %s: %s' % (model, id_))
         if row[14]:
@@ -440,40 +567,3 @@ class Ecoregion(Base, IdNameDescriptionMixin):
 
     def wwf_url(self):
         return 'http://www.worldwildlife.org/ecoregions/' + self.id.lower()
-
-
-class SpeciesCategory(Base):
-    species_pk = Column(Integer, ForeignKey('species.pk'))
-    category_pk = Column(Integer, ForeignKey('category.pk'))
-
-
-@implementer(interfaces.IUnit)
-class Category(CustomModelMixin, Unit):
-    pk = Column(Integer, ForeignKey('unit.pk'), primary_key=True)
-    notes = Column(Unicode)
-    is_habitat = Column(Boolean, default=False)
-
-    @classmethod
-    def csv_query(cls, session, type_=None):
-        query = Unit.csv_query(session)
-        if type_ == 'categories':
-            query = query.filter(cls.is_habitat == false())
-        elif type == 'habitats':
-            query = query.filter(cls.is_habitat == true())
-        return query
-
-    def csv_head(self):
-        return ['id', 'name', 'description', 'language__id', 'notes']
-
-    @declared_attr
-    def species(cls):
-        return relationship(
-            Species,
-            secondary=SpeciesCategory.__table__,
-            backref=backref('categories', order_by=str('Category.id')))
-
-    @classmethod
-    def from_csv(cls, row, data=None):
-        obj = super(Category, cls).from_csv(row)
-        obj.language = data['Languoid'][row[3]]
-        return obj

@@ -16,12 +16,10 @@ from clld.db.models import common
 from clld.lib.dsv import reader
 from clld.lib.imeji import file_urls
 from clld.lib.bibtex import Database
-from clld.util import nfilter
+from clld.util import nfilter, jsonload
 
 from tsammalex import models
-from tsammalex.scripts.util import (
-    update_species_data, load_ecoregions, from_csv, SOURCE_MAP,
-)
+from tsammalex.scripts.util import update_species_data, load_ecoregions, from_csv
 
 
 def main(args):
@@ -42,18 +40,14 @@ def main(args):
     data.add(common.Contribution, 'tsammalex', name="Tsammalex", id="tsammalex")
     glottolog = glottocodes_by_isocode('postgresql://robert@/glottolog3')
 
-    source_map = {v: k for k, v in SOURCE_MAP.items()}
-    refs = Database.from_file(args.data_file('dump', 'TsammalexSources.bib'))
+    refs = Database.from_file(args.data_file('newdump', 'sources.bib'))
     for rec in refs:
-        if rec.id in source_map:
-            data.add(
-                models.Bibrec,
-                source_map[rec.id],
-                _obj=bibtex2source(rec, cls=models.Bibrec))
+        data.add(models.Bibrec, rec.id, _obj=bibtex2source(rec, cls=models.Bibrec))
 
     load_ecoregions(args, data)
+    from_csv(args, models.Lineage, data)
+    from_csv(args, models.Use, data)
     from_csv(args, models.TsammalexContributor, data)
-    from_csv(args, models.TsammalexEditor, data)
 
     def visitor(lang, data):
         if lang.id in glottolog:
@@ -69,21 +63,26 @@ def main(args):
         cat.is_habitat = True
     from_csv(args, models.Category, data, name='habitats', visitor=habitat_visitor)
 
-    with open(args.data_file('classification.json')) as fp:
-        sdata = json.load(fp)
-
-    def species_visitor(sdata, species, data):
+    def species_visitor(eol, species, data):
         species.countries_str = '; '.join([e.name for e in species.countries])
         species.ecoregions_str = '; '.join([e.name for e in species.ecoregions])
-        if species.id in sdata:
-            update_species_data(species, sdata[species.id])
+        if eol.get(species.id):
+            update_species_data(species, eol[species.id])
+        else:
+            print('--> missing eol id:', species.name)
 
-    from_csv(args, models.Species, data, visitor=partial(species_visitor, sdata))
+    eol = jsonload(args.data_file('newdump', 'external', 'eol.json'))
+    from_csv(args, models.Species, data, visitor=partial(species_visitor, eol))
 
-    edmond_urls = file_urls(args.data_file('dump', 'Edmond.xml'))
+    edmond_urls = file_urls(args.data_file('newdump', 'Edmond.xml'))
+    edmond_repls = [
+        ('damaliscusdorcasphillpsi', 'damaliscuspygargusphillipsi'),
+        ('felislybica', 'felissylvestrislybica'),
+        ('felisserval', 'leptailurusserval'),
+    ]
     type_pattern = re.compile('\-(large|small)\.')
     for image in reader(
-            args.data_file('dump', 'images.csv'),
+            args.data_file('newdump', 'images.csv'),
             namedtuples=True,
             delimiter=",",
             #lineterminator='\r\n'
@@ -92,12 +91,15 @@ def main(args):
             continue
 
         id_ = type_pattern.sub('.', image.id)
-        if id_ not in edmond_urls:
-            print('not uploaded? --> %s' % id_)
+        edmond_id = id_[:]
+        for s, p in edmond_repls:
+            edmond_id = edmond_id.replace(p, s)
+        if edmond_id not in edmond_urls:
+            print('not uploaded? --> %s' % edmond_id)
             continue
 
         # keywords,permission
-        jsondata = edmond_urls[id_]
+        jsondata = edmond_urls[edmond_id]
         for k in 'src creator date place comments permission'.split():
             v = getattr(image, k)
             if v:
@@ -111,7 +113,7 @@ def main(args):
                 else:
                     jsondata[k] = v
         f = common.Parameter_files(
-            object=data['Species'][image.species_id],
+            object=data['Species'][image.species__id],
             id=id_,
             name=image.tags,
             jsondata=jsondata,
@@ -123,7 +125,7 @@ def main(args):
         # upload to edmond, get url back!
         # f.create(files_dir, wiki.get(args, img[n]['src'], html=False))
 
-    from_csv(args, models.Word, data)
+    from_csv(args, models.Name, data)
 
 
 def prime_cache(args):

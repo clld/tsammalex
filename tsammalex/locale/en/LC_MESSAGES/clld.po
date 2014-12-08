@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-03-25 13:23+0100\n"
+"POT-Creation-Date: 2014-11-28 17:11+0100\n"
 "PO-Revision-Date: 2014-03-25 13:23+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en <LL@li.org>\n"
@@ -17,11 +17,27 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 1.3\n"
 
-#: tsammalex/__init__.py:9
+#: tsammalex/__init__.py:12
 msgid "Parameter"
 msgstr "Species"
 
-#: tsammalex/__init__.py:10
+#: tsammalex/__init__.py:13
 msgid "Parameters"
 msgstr "Species"
+
+#: tsammalex/__init__.py:14
+msgid "Source"
+msgstr "Reference"
+
+#: tsammalex/__init__.py:15
+msgid "Sources"
+msgstr "References"
+
+#: tsammalex/__init__.py:16
+msgid "Value"
+msgstr "Name"
+
+#: tsammalex/__init__.py:17
+msgid "Values"
+msgstr "Names"
 

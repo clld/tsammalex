@@ -44,4 +44,4 @@ CLLD.LayerOptions.ecoregions = {
     }
 };
 
-TSAMMALEX.getLineage = function(properties){return properties.language.lineage};
+TSAMMALEX.getLineage = function(properties){return properties.lineage.name};

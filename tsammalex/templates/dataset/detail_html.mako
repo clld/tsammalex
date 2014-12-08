@@ -18,14 +18,27 @@
     free images, to search for biological species, and to compare lexical data.
 </p>
 <p>
-    Contributors and comments are very welcome. So far, it has been compiled by Christfried Naumann
-    with the support of Kathrin Heiden (lexical records), Robert Forkel (database structure),
-    Peter Fröhlich, Hans-Jörg Bibiko, Jan Klom and Stefan Koch (former set-up). The project is
+    Contributors and comments are very welcome. It has been set up by Robert Forkel and compiled
+    by Christfried Naumann with the support of Kathrin Heiden, Lena Sell and Noémie Jaulgey (data)
+    as well as Peter Fröhlich, Hans-Jörg Bibiko, Jan Klom and Stefan Koch (former set-up).
+</p>
+<p>
+    The project is
     funded by the Max Planck Insititute for Evolutionary Anthropology's Department of Linguistics,
-    led by Bernard Comrie. Tsammalex is published as part of the Cross-Linguistic Linked Data project,
+    led by Bernard Comrie. Tsammalex is published as part of the
+    ${h.external_link('http://clld.org', 'Cross-Linguistic Linked Data')} project,
     led by Martin Haspelmath.
 </p>
 <p>
-    The content of this web site, including the downloadable database, is published under a
-    Creative Commons Attribution 3.0 Unported License (unless stated otherwise).
+    Tsammalex is a database including linguistic, anthropological and biological information
+    about plant and animal species. It is a resource for linguists, anthropologists and other
+    researchers as well as for speech communities interested in the conservation of their biological
+    knowledge. Sensitive information that may cause harm to communities and their environment,
+    or that may threaten biological species (such as information about specific ways of killing
+    animals or detailed information on medical uses) should not be included here. Cultural knowledge
+    should not be published without the consent of the communities it belongs to.
+</p>
+<p>
+    The content of this web site including the downloadable database, is published under a
+    ${request.dataset.jsondatadict['license_name']} License (unless stated otherwise).
 </p>

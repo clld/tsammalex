@@ -4,7 +4,9 @@ from itertools import chain
 from docx import Document
 from docx.shared import Inches
 
-from clld.web.adapters.geojson import GeoJsonParameterMultipleValueSets, GeoJson
+from clld.web.adapters.geojson import (
+    GeoJsonParameterMultipleValueSets, GeoJson, GeoJsonLanguages,
+)
 from clld.web.adapters.base import Representation
 from clld.interfaces import IParameter, ILanguage, IIndex
 
@@ -35,6 +37,11 @@ class GeoJsonSpecies(GeoJsonParameterMultipleValueSets):
     def feature_properties(self, ctx, req, p):
         return {
             'label': ', '.join(v.name for v in chain(*[vs.values for vs in p[1]]))}
+
+
+class GeoJsonLanguoids(GeoJsonLanguages):
+    def feature_properties(self, ctx, req, feature):
+        return {'lineage': feature.lineage}
 
 
 class Docx(Representation):
@@ -132,3 +139,4 @@ def includeme(config):
     config.register_adapter(SpeciesDocx, IParameter)
     config.register_adapter(GeoJsonEcoregions, IEcoregion, IIndex)
     config.register_adapter(GeoJsonSpecies, IParameter)
+    config.register_adapter(GeoJsonLanguoids, ILanguage, IIndex)

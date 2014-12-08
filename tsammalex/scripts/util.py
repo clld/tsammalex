@@ -1,55 +1,10 @@
 from __future__ import print_function, unicode_literals
-import json
 from itertools import groupby
 
-from clld.util import nfilter
+from clld.util import nfilter, jsonload
 from clld.lib.dsv import reader
 
 from tsammalex.models import Biome, Ecoregion
-
-
-SOURCE_MAP = {
-    'carruthers2000': 'carruthers_wildlife_2000',
-    'vanderwalt1999': 'van_der_walt_kalahari_1999',
-    'duplessis2005': 'plessis_afrikaans-engels_2005',
-    'traillstory1999': 'story_kuha:si_1999',
-    'bennetttsoeu2006': 'bennett_multilingual_2006',
-    'haackeeiseb2002': 'haacke_khoekhoegowab_2002',
-    'picker2002': 'picker_field_2002',
-    'snymaned1990': 'snyman_setswana_1990',
-    'kilianhatz2003': 'kilian-hatz_khwe_2003',
-    'fehnnotes': 'fehn_fieldnotes_',
-    'stuartstuart2007': 'stuart_field_2007',
-    'dickens1994': 'dickens_english_1994',
-    'cillie1997': 'cillie_mammal_1997',
-    'guldemannnaumann2011': 'guldemann_inheritance_2011',
-    'vanrooyen2001': 'van_rooyen_flowering_2001',
-    'dokeetal2008': 'doke_english_2008',
-    'burke2007': 'burke_wild_2007',
-    'branch1998': 'branch_field_1998',
-    'sinclair1994': 'sinclair_field_1994',
-    'westphalnotes': 'westphal_fieldnotes_',
-    'hannan1987': 'hannan_standard_1987',
-    'tanakasugawara2010': 'tanaka_encyclopedia_2010',
-    'dickens1986': 'dickens_qhalaxarzi_1986',
-    'eksteen1997': 'eksteen_major_1997',
-    'kriel1991': 'kriel_new_1991',
-    'sinclair2003': 'sinclair_comprehensive_2003',
-    'konigheine2008': 'konig_concise_2008',
-    'bleek1929': 'bleek_comparative_1929',
-    'cunningham': 'cunningham_guide_2009',
-    'kgalagaditransfrontierpark2003': '_kgalagadi_2003',
-    'bertholdgerlach2011': 'berthold_documentation_2011',
-    'leffers2003': 'leffers_gemsbok_2003',
-    'leeming2003': 'leeming_scorpions_2003',
-    'traillnotes': 'traill_fieldnotes_',
-    'traill1994': 'traill_xoo_1994',
-    'heine1999': 'heine_ani:_1999',
-    'elcin1996': 'elcin_church_council_special_committees_english_1996',
-    'viljoenkamupingene1983': 'viljoen_otjiherero:_1983',
-    'sandsetal2006': 'sands_1400_2006',
-    'visser2001': 'visser_naro_2001',
-}
 
 
 def from_csv(args, model, data, name=None, visitor=None, condition=None, **kw):
@@ -58,7 +13,7 @@ def from_csv(args, model, data, name=None, visitor=None, condition=None, **kw):
     kw.setdefault('lineterminator', str('\r\n'))
     kw.setdefault('quotechar', '"')
     for row in list(reader(
-            args.data_file('dump', (name or model.__csv_name__) + '.csv'), **kw))[1:]:
+            args.data_file('newdump', (name or model.__csv_name__) + '.csv'), **kw))[1:]:
         if condition and not condition(row):
             continue
         obj = model.from_csv(row, data)
@@ -75,13 +30,16 @@ def from_csv(args, model, data, name=None, visitor=None, condition=None, **kw):
 
 
 def update_species_data(species, d):
+    if not species.eol_id:
+        species.eol_id = d['identifier']
+
     if not species.english_name:
-        for vn in d.get('eol', {}).get('vernacularNames', []):
+        for vn in d.get('vernacularNames', []):
             if vn['language'] == 'en' and vn['eol_preferred']:
                 species.english_name = vn['vernacularName']
                 break
 
-    for an in d.get('eol', {}).get('ancestors', []):
+    for an in d.get('ancestors', []):
         if not an.get('taxonRank'):
             continue
         for tr in ['kingdom', 'family', 'order', 'genus']:
@@ -91,18 +49,6 @@ def update_species_data(species, d):
                     #print(tr, ':', curr, '-->', an['scientificName'])
                     setattr(species, tr, an['scientificName'])
 
-    for k, v in d.get('wikipedia', {}).items():
-        for tr in ['family', 'order', 'genus']:
-            if tr == k:
-                curr = getattr(species, tr)
-                if curr != v:
-                    #print(tr, ':', curr, '-->', v)
-                    setattr(species, tr, v)
-
-    #if species.eol_id and not d.get('eol'):
-    #    print('eol_id:', species.eol_id, '-->', None)
-    #    species.eol_id = None
-
 
 def get_center(arr):
     return reduce(
@@ -110,8 +56,7 @@ def get_center(arr):
 
 
 def load_ecoregions(args, data):
-    with open(args.data_file('wwf', 'simplified.json')) as fp:
-        ecoregions = json.load(fp)['features']
+    ecoregions = jsonload(args.data_file('newdump', 'ecoregions.json'))['features']
 
     biome_map = {
         1: ('Tropical & Subtropical Moist Broadleaf Forests', '008001'),

@@ -25,8 +25,7 @@ class LanguageMultiSelect(MultiSelect):
 
     @classmethod
     def query(cls):
-        return DBSession.query(Language).order_by(
-            desc(Languoid.is_english), Language.name)
+        return DBSession.query(Language).order_by(Language.name)
 
     def get_options(self):
         return {

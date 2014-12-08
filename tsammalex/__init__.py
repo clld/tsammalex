@@ -1,5 +1,7 @@
 from functools import partial
 
+from six import string_types
+
 from clld.interfaces import ILanguage, IMapMarker
 from clld.web.app import get_configurator, menu_item, MapMarker
 from clld.web.adapters.base import adapter_factory, Index
@@ -11,6 +13,10 @@ from tsammalex.interfaces import IEcoregion
 _ = lambda s: s
 _('Parameter')
 _('Parameters')
+_('Source')
+_('Sources')
+_('Value')
+_('Values')
 
 
 class TsammalexMapMarker(MapMarker):
@@ -22,11 +28,12 @@ class TsammalexMapMarker(MapMarker):
         if ILanguage.providedBy(ctx):
             lineage = ctx.lineage
 
-        if ctx in models.ICON_MAP:
-            lineage = ctx
+        if isinstance(ctx, string_types):
+            lineage = req.db.query(models.Lineage)\
+                .filter(models.Lineage.name == ctx).one()
 
         if lineage:
-            return 'c' + models.ICON_MAP.get(lineage, 'ffff00')
+            return 'c' + lineage.color
 
 
 def main(global_config, **settings):
@@ -40,9 +47,12 @@ def main(global_config, **settings):
     config.include('tsammalex.adapters')
     config.register_menu(
         ('dataset', partial(menu_item, 'dataset', label='Home')),
+        ('values', partial(menu_item, 'values')),
         ('languages', partial(menu_item, 'languages')),
         ('parameters', partial(menu_item, 'parameters')),
         ('ecoregions', lambda ctx, req: (req.route_url('ecoregions'), 'Ecoregions')),
+        ('sources', partial(menu_item, 'sources')),
+        ('contributors', partial(menu_item, 'contributors', label='Contribute')),
     )
     config.register_resource('ecoregion', models.Ecoregion, IEcoregion, with_index=True)
     config.register_adapter(

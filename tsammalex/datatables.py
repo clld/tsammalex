@@ -1,27 +1,50 @@
 # coding: utf8
-from sqlalchemy import and_, null, or_
+from sqlalchemy import and_, null, or_, false
 from sqlalchemy.orm import joinedload, joinedload_all, aliased
 
 from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
 from clld.web.datatables.parameter import Parameters
 from clld.web.datatables.value import Values
 from clld.web.datatables.language import Languages
+from clld.web.datatables.contributor import Contributors, AddressCol, NameCol, UrlCol
 from clld.web.util.helpers import (
     HTML, external_link, linked_references, button, icon, map_marker_img,
 )
 from clld.db.util import get_distinct_values, as_int, icontains
 from clld.db.meta import DBSession
-from clld.db.models.common import Parameter, Value, Language, ValueSet
+from clld.db.models.common import Parameter, Value, Language, ValueSet, Contributor
 from clld.util import nfilter
 
 from tsammalex.models import (
     Ecoregion, SpeciesEcoregion, Biome,
-    Country, SpeciesCountry,
-    Category, SpeciesCategory, Species,
-    Word,
-    Languoid,
+    Country, Lineage,
+    Category, Species,
+    Name, TsammalexContributor, TsammalexEditor,
+    Languoid, NameReference, NameCategory,
 )
 from tsammalex.util import format_classification
+
+
+class ContribNameCol(NameCol):
+    def format(self, item):
+        res = NameCol.format(self, item)
+        if item.editor:
+            return HTML.span(res, HTML.span(' [ed.]'))
+        return res
+
+
+class TsammalexContributors(Contributors):
+    def base_query(self, query):
+        return query.outerjoin(TsammalexEditor)
+
+    def col_defs(self):
+        return [
+            ContribNameCol(self, 'name'),
+            Col(self, 'section', model_col=TsammalexContributor.sections),
+            AddressCol(self, 'affiliation', model_col=TsammalexContributor.address),
+            Col(self, 'project', model_col=TsammalexContributor.research_project),
+            UrlCol(self, 'homepage'),
+        ]
 
 
 class ThumbnailCol(Col):
@@ -34,7 +57,7 @@ class ThumbnailCol(Col):
         return ''
 
 
-class CategoryCol(Col):
+class _CategoryCol(Col):
     def __init__(self, dt, name, languages, **kw):
         assert languages
         self.lang_dict = {l.pk: l for l in languages}
@@ -122,7 +145,7 @@ class SpeciesTable(Parameters):
             aliased(ValueSet, name='l%s' % i) for i in range(len(self.languages))]
 
     def base_query(self, query):
-        query = query.options(joinedload(Species.categories), joinedload(Parameter._files))
+        query = query.options(joinedload(Parameter._files))
         if self.languages:
             for i, lang in enumerate(self.languages):
                 query = query.outerjoin(
@@ -133,19 +156,7 @@ class SpeciesTable(Parameters):
             query = query \
                 .filter(or_(*[
                     self._langs[i].pk != null() for i in range(len(self._langs))]))\
-                .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk) \
-                .outerjoin(
-                    Category,
-                    and_(
-                        SpeciesCategory.category_pk == Category.pk,
-                        Category.language_pk.in_([l.pk for l in self.languages])))\
                 .options(joinedload_all(Parameter.valuesets, ValueSet.values))
-        else:
-            query = query\
-                .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk) \
-                .outerjoin(Category,
-                           and_(SpeciesCategory.category_pk == Category.pk,
-                                Category.language_pk == null()))
         return query.distinct()
 
     def col_defs(self):
@@ -163,7 +174,7 @@ class SpeciesTable(Parameters):
         if self.languages:
             for i, lang in enumerate(self.languages):
                 res.append(CommonNameCol(self, 'cn%s' % i, lang, self._langs[i]))
-            res.append(CategoryCol(self, 'categories', self.languages, bSortable=False))
+            res.append(_CategoryCol(self, 'categories', self.languages, bSortable=False))
 
         res.extend([
             er_col,
@@ -186,8 +197,8 @@ class RefsCol(Col):
 
     def format(self, item):
         lis = []
-        if item.valueset.source:
-            s = item.valueset.source
+        if item.source:
+            s = item.source
             if s.startswith('http://'):
                 label = s
                 for t in 'wikimedia wikipedia plantzafrica'.split():
@@ -195,84 +206,111 @@ class RefsCol(Col):
                         label = t
                         break
                 lis.append(external_link(s, label))
-        lis.append(linked_references(self.dt.req, item.valueset))
+        lis.append(linked_references(self.dt.req, item))
         return HTML.ul(*lis, class_='unstyled')
 
 
-class MultiCategoriesCol(Col):
-    __kw__ = dict(bSortable=False, bSearchable=False)
+class CategoriesCol(Col):
+    __kw__ = dict(bSortable=False)
+
+    def __init__(self, dt, *args, **kw):
+        kw['choices'] = [(c.pk, c.name) for c in DBSession.query(Category)\
+            .filter(Category.is_habitat == false())\
+            .filter(Category.language == dt.language)]
+        Col.__init__(self, dt, *args, **kw)
 
     def format(self, item):
-        names = [
-            o.name for o in item.valueset.parameter.categories
-            if o.language_pk == item.valueset.language_pk]
-        return HTML.ul(*[HTML.li(name) for name in names], class_="unstyled")
+        return HTML.ul(*[HTML.li(o.name) for o in item.categories], class_="unstyled")
+
+    def search(self, qs):
+        return NameCategory.category_pk == int(qs)
 
 
 class LineageCol(Col):
     def __init__(self, dt, name, **kw):
-        kw['choices'] = get_distinct_values(Languoid.lineage)
-        kw['model_col'] = Languoid.lineage
+        kw['choices'] = [
+            r[0] for r in DBSession.query(Lineage.name).order_by(Lineage.name)]
+        kw['model_col'] = Lineage.name
         Col.__init__(self, dt, name, **kw)
 
     def format(self, item):
         if hasattr(item, 'valueset'):
             item = item.valueset.language
-        return HTML.span(map_marker_img(self.dt.req, item), item.lineage)
+        return HTML.span(map_marker_img(self.dt.req, item), item.lineage.id)
 
 
-class Words(Values):
+class EnglishNameCol(LinkCol):
+    def get_attrs(self, item):
+        return {'label': self.get_obj(item).english_name}
+
+
+class Names(Values):
     def base_query(self, query):
         query = Values.base_query(self, query)
         if self.language:
             query = query\
-                .outerjoin(SpeciesCategory, SpeciesCategory.species_pk == Parameter.pk)\
-                .outerjoin(
-                    Category,
-                    and_(
-                        SpeciesCategory.category_pk == Category.pk,
-                        Category.language_pk == self.language.pk))
-        return query.options(joinedload_all(
-            Value.valueset, ValueSet.parameter, Species.categories))
+                .outerjoin(NameCategory)\
+                .outerjoin(Name.habitats)
+        if not self.language and not self.parameter:
+            query = query.join(ValueSet.language).join(ValueSet.parameter)
+        return query.options(
+            joinedload_all(Value.valueset, ValueSet.parameter),
+            joinedload_all(Name.references, NameReference.source))
 
     def col_defs(self):
-        res = []
+        get_param = lambda i: i.valueset.parameter
+        shared = {col.name: col for col in [
+            LinkCol(self, 'name'),
+            Col(self, 'ipa', sTitle='IPA', model_col=Name.ipa),
+            Col(self, 'grammatical_info', model_col=Name.grammatical_info),
+            LinkCol(
+                self, 'language',
+                model_col=Language.name,
+                get_object=lambda i: i.valueset.language),
+            LinkCol(self, 'species', model_col=Parameter.name, get_object=get_param),
+            ThumbnailCol(self, 'thumbnail', sTitle='', get_object=get_param),
+            RefsCol(self, 'references'),
+            Col(self, 'meaning', model_col=Value.description),
+        ]}
         if self.language:
-            res = [
-                LinkCol(
-                    self, 'species',
-                    model_col=Parameter.name,
-                    get_object=lambda i: i.valueset.parameter),
-                #Col(
-                #    self, 'name',
-                #    sTitle='English name',
-                #    model_col=Parameter.description,
-                #    get_object=lambda i: i.valueset.parameter),
-                ThumbnailCol(self, '_', get_object=lambda i: i.valueset.parameter),
+            return [
+                shared['name'],
+                Col(self, 'blt', sTitle='Basic term', model_col=Name.basic_term),
+                CategoriesCol(self, 'categories'),
+                shared['species'],
+                shared['thumbnail'],
+                shared['ipa'],
+                shared['grammatical_info'],
+                shared['meaning'],
+                shared['references'],
             ]
-        elif self.parameter:
-            res = [
-                LinkCol(
-                    self, 'language',
-                    model_col=Language.name,
-                    get_object=lambda i: i.valueset.language),
-                LineageCol(self, 'lineage'),
-            ]
-        res.append(LinkCol(self, 'name', sTitle='Word form'))
-        res.append(Col(self, 'blt', sTitle='Generic term', model_col=Value.description))
-        res.append(Col(self, 'phonetic', sTitle='IPA', model_col=Word.phonetic))
-        res.append(Col(self, 'grammatical_notes', model_col=Word.grammatical_info))
-        res.append(Col(self, 'exact meaning', model_col=Word.meaning))
-        if self.language:
-            res.append(CategoryCol(
-                self, 'categories',
-                [self.language],
-                get_object=lambda i: i.valueset.parameter))
         if self.parameter:
-            res.append(MultiCategoriesCol(self, 'categories'))
-        res.append(Col(self, 'general_notes', model_col=Word.notes))
-        res.append(RefsCol(self, 'references'))
-        return res
+            return [
+                shared['language'],
+                LineageCol(self, 'lineage'),
+                shared['name'],
+                shared['ipa'],
+                shared['grammatical_info'],
+                shared['meaning'],
+                shared['references'],
+            ]
+            res.append(LinkCol(self, 'name'))
+            res.append(Col(self, 'blt', sTitle='Generic term', model_col=Value.description))
+            res.append(Col(self, 'ipa', sTitle='IPA', model_col=Name.ipa))
+            res.append(Col(self, 'grammatical_notes', model_col=Name.grammatical_info))
+        return [
+            shared['name'],
+            shared['language'],
+            shared['ipa'],
+            shared['grammatical_info'],
+            shared['species'],
+            EnglishNameCol(
+                self, 'english name',
+                model_col=Species.english_name,
+                get_object=get_param),
+            shared['thumbnail'],
+            shared['references'],
+        ]
 
     def get_options(self):
         if self.parameter:
@@ -280,6 +318,9 @@ class Words(Values):
 
 
 class Languoids(Languages):
+    def base_query(self, query):
+        return query.join(Languoid.lineage)
+
     def col_defs(self):
         res = Languages.col_defs(self)
         return res[:2] + [LineageCol(self, 'lineage')] + res[2:]
@@ -338,6 +379,7 @@ class Ecoregions(DataTable):
 
 def includeme(config):
     config.register_datatable('parameters', SpeciesTable)
-    config.register_datatable('values', Words)
+    config.register_datatable('values', Names)
     config.register_datatable('languages', Languoids)
-    config.register_datatable('ecoregions', Ecoregions)
+    config.register_datatable('languages', Languoids)
+    config.register_datatable('contributors', TsammalexContributors)
