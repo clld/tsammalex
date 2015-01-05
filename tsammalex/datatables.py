@@ -1,6 +1,6 @@
 # coding: utf8
 from sqlalchemy import and_, null, or_, false
-from sqlalchemy.orm import joinedload, joinedload_all, aliased
+from sqlalchemy.orm import joinedload, joinedload_all, aliased, contains_eager
 
 from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
 from clld.web.datatables.parameter import Parameters
@@ -12,7 +12,7 @@ from clld.web.util.helpers import (
 )
 from clld.db.util import get_distinct_values, as_int, icontains
 from clld.db.meta import DBSession
-from clld.db.models.common import Parameter, Value, Language, ValueSet, Contributor
+from clld.db.models.common import Parameter, Value, Language, ValueSet
 from clld.util import nfilter
 
 from tsammalex.models import (
@@ -20,7 +20,7 @@ from tsammalex.models import (
     Country, Lineage,
     Category, Species,
     Name, TsammalexContributor, TsammalexEditor,
-    Languoid, NameReference, NameCategory, Use, NameUse, NameHabitat,
+    Languoid, NameReference, NameCategory, Use, NameUse,
 )
 from tsammalex.util import format_classification
 
@@ -386,7 +386,7 @@ class Ecoregions(DataTable):
         return query\
             .join(Ecoregion.biome)\
             .filter(Ecoregion.realm == 'Afrotropics')\
-            .options(joinedload(Ecoregion.biome), joinedload(Ecoregion.species))
+            .options(contains_eager(Ecoregion.biome), joinedload(Ecoregion.species))
 
     def col_defs(self):
         return [

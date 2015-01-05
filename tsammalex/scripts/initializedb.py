@@ -5,8 +5,8 @@ import sys
 import json
 from itertools import groupby
 from functools import partial
-import re
 
+from purl import URL
 from path import path
 from sqlalchemy.orm import joinedload
 from clld.scripts.util import (
@@ -16,7 +16,6 @@ from clld.scripts.util import (
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib.dsv import reader
-from clld.lib.imeji import file_urls
 from clld.lib.bibtex import Database
 from clld.util import nfilter, jsonload
 
@@ -51,16 +50,16 @@ def main(args):
     load_ecoregions(data_file, data)
     load_countries(data)
 
-    def languoid_visitor(lang, data):
+    def languoid_visitor(lang, _):
         if lang.id in glottolog:
             add_language_codes(data, lang, lang.id.split('-')[0], glottolog)
         if lang.id == 'eng':
             lang.is_english = True
 
-    def habitat_visitor(cat, data):
+    def habitat_visitor(cat, _):
         cat.is_habitat = True
 
-    def species_visitor(eol, species, data):
+    def species_visitor(eol, species, _):
         species.countries_str = '; '.join([e.name for e in species.countries])
         species.ecoregions_str = '; '.join([e.name for e in species.ecoregions])
         if eol.get(species.id):
@@ -81,30 +80,18 @@ def main(args):
     ]:
         from_csv(data_file, model, data, **kw)
 
-    edmond_urls = file_urls(data_file('Edmond.xml'))
-    edmond_repls = [
-        ('damaliscusdorcasphillpsi', 'damaliscuspygargusphillipsi'),
-        ('felislybica', 'felissylvestrislybica'),
-        ('felisserval', 'leptailurusserval'),
-    ]
-    type_pattern = re.compile('\-(large|small)\.')
     for image in reader(data_file('images.csv'), namedtuples=True, delimiter=","):
-        if '-thumbnail' in image.id:
-            continue
-
         if image.species__id not in data['Species']:
             continue
 
-        id_ = type_pattern.sub('.', image.id)
-        edmond_id = id_[:]
-        for s, p in edmond_repls:
-            edmond_id = edmond_id.replace(p, s)
-        if edmond_id not in edmond_urls:
-            print('not uploaded? --> %s' % edmond_id)
+        url = URL(image.source_url)
+        if url.host() != 'edmond.mpdl.mpg.de':
             continue
 
-        # keywords,permission
-        jsondata = edmond_urls[edmond_id]
+        jsondata = dict(
+            url=image.source_url,
+            thumbnail=image.source_url.replace('/original/', '/thumbnail/'))
+
         for k in 'src creator date place comments permission'.split():
             v = getattr(image, k)
             if v:
@@ -119,7 +106,7 @@ def main(args):
                     jsondata[k] = v
         f = common.Parameter_files(
             object=data['Species'][image.species__id],
-            id=id_,
+            id=image.id,
             name=image.tags,
             jsondata=jsondata,
             mime_type=image.mime_type)
@@ -147,9 +134,7 @@ def prime_cache(args):
 
     # TODO: mark countries/ecoregions without related species as inactive!
 
-    #
     # TODO: assign ThePlantList ids!
-    #
 
 
 if __name__ == '__main__':

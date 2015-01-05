@@ -42,9 +42,6 @@ def main(global_config, **settings):
     config = get_configurator(
         'tsammalex', (TsammalexMapMarker(), IMapMarker), settings=settings)
     config.include('clldmpg')
-    config.include('tsammalex.datatables')
-    config.include('tsammalex.maps')
-    config.include('tsammalex.adapters')
     config.register_menu(
         ('dataset', partial(menu_item, 'dataset', label='Home')),
         ('values', partial(menu_item, 'values')),
@@ -62,9 +59,4 @@ def main(global_config, **settings):
             send_mimetype='text/html',
             extension='snippet.html'),
         IEcoregion)
-    config.register_adapter(
-        adapter_factory('ecoregion/detail_html.mako'), IEcoregion)
-    config.register_adapter(
-        adapter_factory('ecoregion/index_html.mako', base=Index), IEcoregion)
-
     return config.make_wsgi_app()
