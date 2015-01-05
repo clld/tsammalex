@@ -1,29 +1,21 @@
 from __future__ import print_function, unicode_literals
 from itertools import groupby
 
+from pycountry import countries
 from clld.util import nfilter, jsonload
 from clld.lib.dsv import reader
 
-from tsammalex.models import Biome, Ecoregion
+from tsammalex.models import Biome, Ecoregion, Country
 
 
-def from_csv(args, model, data, name=None, visitor=None, condition=None, **kw):
-    ids = {}
-    kw.setdefault('delimiter', ',')
-    kw.setdefault('lineterminator', str('\r\n'))
-    kw.setdefault('quotechar', '"')
-    for row in list(reader(
-            args.data_file('newdump', (name or model.__csv_name__) + '.csv'), **kw))[1:]:
-        if condition and not condition(row):
-            continue
-        obj = model.from_csv(row, data)
+def from_csv(data_file, model, data, name=None, visitor=None):
+    kw = {'delimiter': ',', 'lineterminator': str('\r\n'), 'quotechar': '"'}
+    for row in list(reader(data_file((name or model.__csv_name__) + '.csv'), **kw))[1:]:
+        try:
+            obj = model.from_csv(row, data)
+        except KeyError:
+            obj = None
         if obj:
-            if hasattr(obj, 'id'):
-                if obj.id in ids:
-                    print('duplicate id in %s' % (name or model.__csv_name__,))
-                    print(row)
-                    raise ValueError
-                ids[obj.id] = 1
             obj = data.add(model, row[0], _obj=obj)
             if visitor:
                 visitor(obj, data)
@@ -55,8 +47,13 @@ def get_center(arr):
         lambda x, y: [x[0] + y[0] / len(arr), x[1] + y[1] / len(arr)], arr, [0.0, 0.0])
 
 
-def load_ecoregions(args, data):
-    ecoregions = jsonload(args.data_file('newdump', 'ecoregions.json'))['features']
+def load_countries(data):
+    for country in countries:
+        data.add(Country, country.alpha2, id=country.alpha2, name=country.name)
+
+
+def load_ecoregions(data_file, data):
+    ecoregions = jsonload(data_file('ecoregions.json'))['features']
 
     biome_map = {
         1: ('Tropical & Subtropical Moist Broadleaf Forests', '008001'),

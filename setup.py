@@ -9,14 +9,13 @@ README = open(os.path.join(here, 'README.md')).read()
 requires = [
     'clld>=0.16',
     'clldmpg',
-    'pyramid',
-    'SQLAlchemy',
     'transaction',
     'pyramid_tm',
     'zope.sqlalchemy',
     'waitress',
     'python-docx',
-    ]
+    'pycountry',
+]
 
 setup(name='tsammalex',
       version='0.0',

@@ -55,7 +55,7 @@ class LanguoidMap(Map):
 class EcoregionsMap(Map):
     def get_options(self):
         return {
-            'info_route': 'ecoregion',
+            'info_route': 'ecoregion_alt',
             'no_showlabels': True,
             'max_zoom': 8,
         }

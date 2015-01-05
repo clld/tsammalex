@@ -20,7 +20,7 @@ from tsammalex.models import (
     Country, Lineage,
     Category, Species,
     Name, TsammalexContributor, TsammalexEditor,
-    Languoid, NameReference, NameCategory,
+    Languoid, NameReference, NameCategory, Use, NameUse, NameHabitat,
 )
 from tsammalex.util import format_classification
 
@@ -94,7 +94,7 @@ class CommonNameCol(Col):
     def __init__(self, dt, name, lang, alias, **kw):
         self.lang = lang
         self.alias = alias
-        kw['sTitle'] = 'Name in %s' % lang.name
+        kw['sTitle'] = 'Colloquial names in %s' % lang.name
         Col.__init__(self, dt, name, **kw)
 
     def format(self, item):
@@ -166,15 +166,16 @@ class SpeciesTable(Parameters):
 
         res = [
             LinkCol(self, 'name', sTitle='Species'),
-            Col(self, 'description', sTitle='English name'),
+            Col(self, 'english_name', model_col=Species.english_name),
             ClassificationCol(self, 'order', sTitle='Biological classification'),
             ThumbnailCol(self, 'thumbnail'),
             # TODO: second thumbnail?
+            Col(self, 'characteristics', model_col=Species.characteristics)
         ]
         if self.languages:
             for i, lang in enumerate(self.languages):
                 res.append(CommonNameCol(self, 'cn%s' % i, lang, self._langs[i]))
-            res.append(_CategoryCol(self, 'categories', self.languages, bSortable=False))
+            #res.append(_CategoryCol(self, 'categories', self.languages, bSortable=False))
 
         res.extend([
             er_col,
@@ -210,20 +211,46 @@ class RefsCol(Col):
         return HTML.ul(*lis, class_='unstyled')
 
 
-class CategoriesCol(Col):
+class RelationsCol(Col):
     __kw__ = dict(bSortable=False)
+    __rel_name__ = None
 
     def __init__(self, dt, *args, **kw):
-        kw['choices'] = [(c.pk, c.name) for c in DBSession.query(Category)\
-            .filter(Category.is_habitat == false())\
-            .filter(Category.language == dt.language)]
+        kw['choices'] = [(c.pk, c.name) for c in self._choices(dt)]
         Col.__init__(self, dt, *args, **kw)
 
+    def _choices(self, dt):
+        raise NotImplemented()
+
     def format(self, item):
-        return HTML.ul(*[HTML.li(o.name) for o in item.categories], class_="unstyled")
+        return HTML.ul(
+            *[HTML.li(o.name) for o in getattr(item, self.__rel_name__)],
+            class_="unstyled")
+
+    def search(self, qs):
+        raise NotImplemented()
+
+
+class CategoriesCol(RelationsCol):
+    __rel_name__ = 'categories'
+
+    def _choices(self, dt):
+        return DBSession.query(Category)\
+            .filter(Category.is_habitat == false())\
+            .filter(Category.language == dt.language)
 
     def search(self, qs):
         return NameCategory.category_pk == int(qs)
+
+
+class UsesCol(RelationsCol):
+    __rel_name__ = 'uses'
+
+    def _choices(self, dt):
+        return DBSession.query(Use)
+
+    def search(self, qs):
+        return NameUse.use_pk == int(qs)
 
 
 class LineageCol(Col):
@@ -282,7 +309,8 @@ class Names(Values):
                 shared['ipa'],
                 shared['grammatical_info'],
                 shared['meaning'],
-                shared['references'],
+                #shared['references'],
+                UsesCol(self, 'uses', sTitle='Usage'),
             ]
         if self.parameter:
             return [
@@ -383,3 +411,4 @@ def includeme(config):
     config.register_datatable('languages', Languoids)
     config.register_datatable('languages', Languoids)
     config.register_datatable('contributors', TsammalexContributors)
+    config.register_datatable('ecoregions', Ecoregions)

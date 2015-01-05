@@ -1,8 +1,3 @@
-<%inherit file="../${context.get('request').registry.settings.get('clld.app_template', 'app.mako')}"/>
-<%namespace name="util" file="../util.mako"/>
-<%! active_menu_item = "ecoregions" %>
-<%block name="title">Ecoregion ${ctx.id}: ${ctx.name}</%block>
-
 <h3>${ctx.name}</h3>
 <table class="table table-non-fluid table-condensed">
     <tbody>

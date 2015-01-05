@@ -56,6 +56,13 @@ def main(global_config, **settings):
     )
     config.register_resource('ecoregion', models.Ecoregion, IEcoregion, with_index=True)
     config.register_adapter(
+        adapter_factory(
+            'ecoregion/snippet_html.mako',
+            mimetype='application/vnd.clld.snippet+xml',
+            send_mimetype='text/html',
+            extension='snippet.html'),
+        IEcoregion)
+    config.register_adapter(
         adapter_factory('ecoregion/detail_html.mako'), IEcoregion)
     config.register_adapter(
         adapter_factory('ecoregion/index_html.mako', base=Index), IEcoregion)

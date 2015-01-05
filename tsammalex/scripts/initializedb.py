@@ -7,9 +7,11 @@ from itertools import groupby
 from functools import partial
 import re
 
+from path import path
 from sqlalchemy.orm import joinedload
 from clld.scripts.util import (
     initializedb, Data, bibtex2source, glottocodes_by_isocode, add_language_codes,
+    ExistingDir,
 )
 from clld.db.meta import DBSession
 from clld.db.models import common
@@ -19,15 +21,18 @@ from clld.lib.bibtex import Database
 from clld.util import nfilter, jsonload
 
 from tsammalex import models
-from tsammalex.scripts.util import update_species_data, load_ecoregions, from_csv
+from tsammalex.scripts.util import update_species_data, load_ecoregions, from_csv, load_countries
 
 
 def main(args):
+    def data_file(*comps): 
+        return path(args.data_repos).joinpath('tsammalexdata', 'data', *comps)
+
     data = Data()
     data.add(common.Dataset, 'tsammalex',
         id="tsammalex",
         name="Tsammalex",
-        description="A lexical database on plants and animals (preliminary version)",
+        description="A lexical database on plants and animals",
         publisher_name="Max Planck Institute for Evolutionary Anthropology",
         publisher_place="Leipzig",
         publisher_url="http://www.eva.mpg.de",
@@ -40,28 +45,20 @@ def main(args):
     data.add(common.Contribution, 'tsammalex', name="Tsammalex", id="tsammalex")
     glottolog = glottocodes_by_isocode('postgresql://robert@/glottolog3')
 
-    refs = Database.from_file(args.data_file('newdump', 'sources.bib'))
-    for rec in refs:
+    for rec in Database.from_file(data_file('sources.bib')):
         data.add(models.Bibrec, rec.id, _obj=bibtex2source(rec, cls=models.Bibrec))
 
-    load_ecoregions(args, data)
-    from_csv(args, models.Lineage, data)
-    from_csv(args, models.Use, data)
-    from_csv(args, models.TsammalexContributor, data)
+    load_ecoregions(data_file, data)
+    load_countries(data)
 
-    def visitor(lang, data):
+    def languoid_visitor(lang, data):
         if lang.id in glottolog:
             add_language_codes(data, lang, lang.id.split('-')[0], glottolog)
         if lang.id == 'eng':
             lang.is_english = True
 
-    from_csv(args, models.Languoid, data, visitor=visitor)
-    from_csv(args, models.Country, data)
-    from_csv(args, models.Category, data, name='categories')
-
     def habitat_visitor(cat, data):
         cat.is_habitat = True
-    from_csv(args, models.Category, data, name='habitats', visitor=habitat_visitor)
 
     def species_visitor(eol, species, data):
         species.countries_str = '; '.join([e.name for e in species.countries])
@@ -71,23 +68,31 @@ def main(args):
         else:
             print('--> missing eol id:', species.name)
 
-    eol = jsonload(args.data_file('newdump', 'external', 'eol.json'))
-    from_csv(args, models.Species, data, visitor=partial(species_visitor, eol))
+    eol = jsonload(data_file('external', 'eol.json'))
+    for model, kw in [
+        (models.Lineage, {}),
+        (models.Use, {}),
+        (models.TsammalexContributor, {}),
+        (models.Languoid, dict(visitor=languoid_visitor)),
+        (models.Category, dict(name='categories')),
+        (models.Category, dict(name='habitats', visitor=habitat_visitor)),
+        (models.Species, dict(visitor=partial(species_visitor, eol))),
+        (models.Name, {}),
+    ]:
+        from_csv(data_file, model, data, **kw)
 
-    edmond_urls = file_urls(args.data_file('newdump', 'Edmond.xml'))
+    edmond_urls = file_urls(data_file('Edmond.xml'))
     edmond_repls = [
         ('damaliscusdorcasphillpsi', 'damaliscuspygargusphillipsi'),
         ('felislybica', 'felissylvestrislybica'),
         ('felisserval', 'leptailurusserval'),
     ]
     type_pattern = re.compile('\-(large|small)\.')
-    for image in reader(
-            args.data_file('newdump', 'images.csv'),
-            namedtuples=True,
-            delimiter=",",
-            #lineterminator='\r\n'
-    ):
+    for image in reader(data_file('images.csv'), namedtuples=True, delimiter=","):
         if '-thumbnail' in image.id:
+            continue
+
+        if image.species__id not in data['Species']:
             continue
 
         id_ = type_pattern.sub('.', image.id)
@@ -119,13 +124,6 @@ def main(args):
             jsondata=jsondata,
             mime_type=image.mime_type)
         assert f
-        #
-        # TODO: handle new images!?
-        #
-        # upload to edmond, get url back!
-        # f.create(files_dir, wiki.get(args, img[n]['src'], html=False))
-
-    from_csv(args, models.Name, data)
 
 
 def prime_cache(args):
@@ -147,11 +145,14 @@ def prime_cache(args):
 
         vs.description = '; '.join(d)
 
+    # TODO: mark countries/ecoregions without related species as inactive!
+
     #
     # TODO: assign ThePlantList ids!
     #
 
 
 if __name__ == '__main__':
-    initializedb(create=main, prime_cache=prime_cache)
+    initializedb(
+        (('data_repos',), dict(action=ExistingDir)), create=main, prime_cache=prime_cache)
     sys.exit(0)

@@ -261,29 +261,6 @@ class Name(CustomModelMixin, Value):
                 joinedload_all(cls.valueset, ValueSet.language),
                 joinedload_all(cls.valueset, ValueSet.parameter))
 
-    def to_csv(self, ctx=None, req=None, cols=None):
-        row = []
-        for col in self.csv_head():
-            if '__' in col:
-                name, cardinality = col.split('__', 1)
-                val = ''
-                if name == 'language':
-                    val = self.valueset.language.id
-                elif name == 'species':
-                    val = self.valueset.parameter.id
-                elif name in ['categories', 'habitats', 'uses']:
-                    val = ';'.join(obj.id for obj in getattr(self, name))
-                elif name == 'refs':
-                    val = ';'.join(
-                        '%s[%s]' % (r.source.id, r.description or '')
-                        for r in self.references)
-            elif col == 'audio':
-                val = ''
-            else:
-                val = getattr(self, col)
-            row.append(val)
-        return row
-
     @classmethod
     def from_csv(cls, row, data=None, description=None):
         obj = cls(**{n: row[i] for i, n in enumerate(cls.__csv_head__) if '__' not in n and n != 'audio'})
@@ -379,10 +356,6 @@ class Species(CustomModelMixin, Parameter):
         self.description = value
 
     def csv_head(self):
-        #id,scientific_name,species_description,english_name,kingdom,order,family,genus,characteristics,
-        # biotope,ecoregions__ids,countries__ids,general_uses,notes,refs__ids,
-        # wikipedia_url,eol_id,links
-
         return [
             'id',
             'scientific_name',
@@ -397,8 +370,6 @@ class Species(CustomModelMixin, Parameter):
             'ecoregions__ids',  # 10
             'countries__ids',  # 11
             'general_uses',  # ?
-
-
             'notes',
             'refs__ids',  # 14
             'wikipedia_url',
@@ -420,13 +391,6 @@ class Species(CustomModelMixin, Parameter):
     def eol_url(self):
         if self.eol_id:
             return 'http://eol.org/%s' % self.eol_id
-
-    def to_csv(self, ctx=None, req=None, cols=None):
-        row = super(Species, self).to_csv(ctx=ctx, req=req, cols=cols)
-        row[14] = ';'.join(
-                '%s[%s]' % (r.source.id, r.description or '')
-                for r in self.references)
-        return row
 
     @classmethod
     def from_csv(cls, row, data=None):
@@ -474,11 +438,6 @@ class SpeciesCountry(Base):
 
 
 class Country(Base, IdNameDescriptionMixin):
-    __csv_name__ = 'countries'
-
-    def csv_head(self):
-        return ['id', 'name', 'description']
-
     @declared_attr
     def species(cls):
         return relationship(
