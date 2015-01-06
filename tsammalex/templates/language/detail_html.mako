@@ -11,13 +11,12 @@ ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
 </div>
 <div class="tabbable">
     <ul class="nav nav-tabs">
-        <li class="active"><a href="#words" data-toggle="tab">Words</a></li>
         <li><a href="#description" data-toggle="tab">Description</a></li>
+        <li class="active"><a href="#names" data-toggle="tab">Names (linguistic view)</a></li>
+        <li><a href="#cultural" data-toggle="tab">Names (cultural view)</a></li>
+        ##<li><a href="#species" data-toggle="tab">Species (bilingual comparative view)</a></li>
     </ul>
     <div class="tab-content" style="overflow: visible;">
-        <div id="words" class="tab-pane active">
-            ${request.get_datatable('values', h.models.Value, language=ctx).render()}
-        </div>
         <div id="description" class="tab-pane">
             <p>${ctx.description or ''}</p>
             % if categories:
@@ -30,6 +29,15 @@ ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
                 </dl>
             % endif
         </div>
+        <div id="names" class="tab-pane active">
+            ${request.get_datatable('values', h.models.Value, language=ctx).render()}
+        </div>
+        <div id="cultural" class="tab-pane">
+            ${request.get_datatable('values', h.models.Value, language=ctx, type='cultural').render()}
+        </div>
+        ##<div id="species" class="tab-pane">
+        ##    ${request.get_datatable('values', h.models.Value, language=ctx).render()}
+        ##</div>
     </div>
     <script>
 $(document).ready(function() {

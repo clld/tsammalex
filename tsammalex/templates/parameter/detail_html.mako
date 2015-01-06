@@ -25,34 +25,9 @@
             <td>Biological classification:</td>
             <td>${u.format_classification(ctx, with_species=True, with_rank=True)|n}</td>
         </tr>
-            % if ctx.characteristics:
-                <tr>
-                    <td>Characteristics:</td>
-                    <td>${ctx.characteristics}</td>
-                </tr>
-            % endif
-        <tr>
-            <td>Countries:</td>
-            <td>
-                <ul class="unstyled">
-                    % for c in ctx.countries:
-                        <li>${c.name} (${c.id})</li>
-                    % endfor
-                </ul>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <a href="${request.route_url('ecoregions')}">Ecoregions</a>:
-            </td>
-            <td>
-                <ul class="unstyled">
-                    % for er in ctx.ecoregions:
-                    <li>${er.id} ${er.name}</li>
-                    % endfor
-                </ul>
-            </td>
-        </tr>
+        ${u.tr_attr(ctx, 'characteristics')}
+        ${u.tr_rel(ctx, 'countries', dt='id', dd='name')}
+        ${u.tr_rel(ctx, 'ecoregions', dt='id', dd='name')}
         <tr>
             <td>Links:</td>
             <td>
@@ -81,12 +56,7 @@
                 </ul>
             </td>
         </tr>
-        % if ctx.references:
-            <tr>
-                <td>References:</td>
-                <td>${h.linked_references(request, ctx)}</td>
-            </tr>
-        % endif
+        ${u.tr_attr(ctx, 'references', content=h.linked_references(request, ctx))}
     </tbody>
 </table>
     </div>
@@ -100,7 +70,9 @@
     % for f in chunk:
         <div class="span4">
             <div class="well">
-                <img src="${request.file_url(f)}" class="image"/>
+                <a href="${f.jsondatadict.get('full')}" title="view image">
+                    <img src="${f.jsondatadict.get('web')}" class="image"/>
+                </a>
             </div>
             <table class="table table-condensed">
                 <tbody>

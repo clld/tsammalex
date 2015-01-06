@@ -4,8 +4,37 @@ from clld.web.util.multiselect import MultiSelect
 from clld.db.meta import DBSession
 from clld.db.models.common import Language, Unit
 from clld.web.util.htmllib import HTML
+from clld.web.util.helpers import maybe_external_link
 
-from tsammalex.models import Languoid
+
+def collapsed(id_, content):
+    return HTML.div(
+        HTML.p(HTML.a(
+            '...',
+            **{'class': 'btn', 'data-toggle': 'collapse', 'data-target': '#%s' % id_})),
+        HTML.div(content, id=id_, class_='collapse'))
+
+
+def tr_rel(ctx, name, label=None, dt='name', dd='description'):
+    items = getattr(ctx, name)
+    if not items:
+        return ''
+    content = []
+    for item in items:
+        content.extend([HTML.dt(getattr(item, dt)), HTML.dd(getattr(item, dd))])
+    content = HTML.dl(*content, class_='dl-horizontal')
+    if len(items) > 3:
+        content = collapsed('collapsed-' + name, content)
+    return HTML.tr(HTML.td((label or name.capitalize()) + ':'), HTML.td(content))
+
+
+def tr_attr(ctx, name, label=None, content=None):
+    attr = getattr(ctx, name)
+    if not attr:
+        return ''
+    return HTML.tr(
+        HTML.td((label or name.capitalize()) + ':'),
+        HTML.td(content or maybe_external_link(attr)))
 
 
 def format_classification(species, with_species=False, with_rank=False):

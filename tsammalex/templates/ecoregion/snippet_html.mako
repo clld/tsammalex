@@ -21,7 +21,7 @@
             <tr>
                 <td>Species in Tsammalex:</td>
                 <td>
-                    <a href="${request.route_url('parameters', _query=dict(er=ctx.name))}"
+                    <a href="${request.route_url('parameters', _query=dict(er=ctx.id))}"
                        title="show related species (${len(ctx.species)})">${len(ctx.species)}</a>
                 </td>
             </tr>

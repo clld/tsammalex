@@ -1,5 +1,5 @@
 # coding: utf8
-from sqlalchemy import and_, null, or_, false
+from sqlalchemy import and_, null, or_, false, true
 from sqlalchemy.orm import joinedload, joinedload_all, aliased, contains_eager
 
 from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
@@ -8,7 +8,7 @@ from clld.web.datatables.value import Values
 from clld.web.datatables.language import Languages
 from clld.web.datatables.contributor import Contributors, AddressCol, NameCol, UrlCol
 from clld.web.util.helpers import (
-    HTML, external_link, linked_references, button, icon, map_marker_img,
+    HTML, external_link, linked_references, button, icon, map_marker_img, link,
 )
 from clld.db.util import get_distinct_values, as_int, icontains
 from clld.db.meta import DBSession
@@ -20,9 +20,9 @@ from tsammalex.models import (
     Country, Lineage,
     Category, Species,
     Name, TsammalexContributor, TsammalexEditor,
-    Languoid, NameReference, NameCategory, Use, NameUse,
+    Languoid, NameReference, NameCategory, Use, NameUse, NameHabitat,
 )
-from tsammalex.util import format_classification
+from tsammalex.util import format_classification, collapsed
 
 
 class ContribNameCol(NameCol):
@@ -51,9 +51,9 @@ class ThumbnailCol(Col):
     __kw__ = dict(bSearchable=False, bSortable=False)
 
     def format(self, item):
-        item = self.get_obj(item)
-        if item.thumbnail:
-            return HTML.img(src=item.thumbnail)
+        thumbnail = self.get_obj(item).image_url('thumbnail')
+        if thumbnail:
+            return HTML.img(src=thumbnail)
         return ''
 
 
@@ -81,13 +81,45 @@ class _CategoryCol(Col):
         return Category.name == qs
 
 
-class EcoregionCol(Col):
-    def __init__(self, *args, **kw):
+class EcoregionCountryColBase(Col):
+    __kw__ = {'sortable': False}
+
+    def __init__(self, model, species_col, *args, **kw):
+        self.species_col = species_col
         kw['choices'] = [
-            er.name for er in
-            DBSession.query(Ecoregion).join(SpeciesEcoregion).order_by(Ecoregion.id)]
-        kw['model_col'] = Species.ecoregions_str
+            (o.id, '%s %s' % (o.id, o.name)) for o in
+            DBSession.query(model).filter(model.active == true()).order_by(model.id)]
+        kw['model_col'] = getattr(Species, self.species_col)
         Col.__init__(self, *args, **kw)
+
+    def search(self, qs):
+        return icontains(self.model_col, qs)
+
+    def content(self, items):
+        return ' '.join(items)
+
+    def format(self, item):
+        items = (getattr(item, self.species_col) or '').split()
+        content = self.content(items)
+        if len(items) < 4:
+            return content
+        return collapsed('%s-%s' % (self.species_col, item.id), content)
+
+
+class EcoregionCol(EcoregionCountryColBase):
+    def __init__(self, *args, **kw):
+        EcoregionCountryColBase.__init__(self, Ecoregion, 'ecoregions_str', *args, **kw)
+
+    def content(self, items):
+        return HTML.ul(*[
+            HTML.li(HTML.a(eid, href=self.dt.req.route_url('ecoregion', id=eid)))
+            for eid in items],
+            class_='unstyled')
+
+
+class CountriesCol(EcoregionCountryColBase):
+    def __init__(self, *args, **kw):
+        EcoregionCountryColBase.__init__(self, Country, 'countries_str', *args, **kw)
 
 
 class CommonNameCol(Col):
@@ -145,7 +177,9 @@ class SpeciesTable(Parameters):
             aliased(ValueSet, name='l%s' % i) for i in range(len(self.languages))]
 
     def base_query(self, query):
-        query = query.options(joinedload(Parameter._files))
+        query = query\
+            .outerjoin(SpeciesEcoregion, Ecoregion)\
+            .options(joinedload(Parameter._files))
         if self.languages:
             for i, lang in enumerate(self.languages):
                 query = query.outerjoin(
@@ -160,7 +194,7 @@ class SpeciesTable(Parameters):
         return query.distinct()
 
     def col_defs(self):
-        er_col = EcoregionCol(self, 'ecoregions', bSortable=False)
+        er_col = EcoregionCol(self, 'ecoregions')
         if 'er' in self.req.params:
             er_col.js_args['sFilter'] = self.req.params['er']
 
@@ -177,12 +211,7 @@ class SpeciesTable(Parameters):
                 res.append(CommonNameCol(self, 'cn%s' % i, lang, self._langs[i]))
             #res.append(_CategoryCol(self, 'categories', self.languages, bSortable=False))
 
-        res.extend([
-            er_col,
-            Col(self, 'countries',
-                model_col=Species.countries_str,
-                choices=get_distinct_values(Country.name),
-                bSortable=False)])
+        res.extend([er_col, CountriesCol(self, 'countries')])
         # TODO: characteristics col?
         return res
 
@@ -235,12 +264,24 @@ class CategoriesCol(RelationsCol):
     __rel_name__ = 'categories'
 
     def _choices(self, dt):
-        return DBSession.query(Category)\
-            .filter(Category.is_habitat == false())\
+        return DBSession.query(Category) \
+            .filter(Category.is_habitat == false()) \
             .filter(Category.language == dt.language)
 
     def search(self, qs):
         return NameCategory.category_pk == int(qs)
+
+
+class HabitatsCol(RelationsCol):
+    __rel_name__ = 'habitats'
+
+    def _choices(self, dt):
+        return DBSession.query(Category)\
+            .filter(Category.is_habitat == true())\
+            .filter(Category.language == dt.language)
+
+    def search(self, qs):
+        return NameHabitat.category_pk == int(qs)
 
 
 class UsesCol(RelationsCol):
@@ -272,14 +313,33 @@ class EnglishNameCol(LinkCol):
 
 
 class Names(Values):
+    def __init__(self, req, model, eid=None, **kw):
+        self._type = req.params.get('type', kw.pop('type', ''))
+        Values.__init__(self, req, model, eid=eid, **kw)
+        self.eid = self.eid + self._type
+
+    def xhr_query(self):
+        res = Values.xhr_query(self)
+        if self._type:
+            res['type'] = self._type
+        return res
+
     def base_query(self, query):
         query = Values.base_query(self, query)
         if self.language:
             query = query\
                 .outerjoin(NameCategory)\
-                .outerjoin(Name.habitats)
+                .outerjoin(NameHabitat)\
+                .outerjoin(Name.uses)\
+                .options(
+                    contains_eager(Name.uses),
+                    joinedload(Name.habitats),
+                    joinedload(Name.categories))
         if not self.language and not self.parameter:
             query = query.join(ValueSet.language).join(ValueSet.parameter)
+        if not self.parameter:
+            query = query.options(joinedload(
+                Value.valueset, ValueSet.parameter, Parameter._files))
         return query.options(
             joinedload_all(Value.valueset, ValueSet.parameter),
             joinedload_all(Name.references, NameReference.source))
@@ -300,18 +360,30 @@ class Names(Values):
             Col(self, 'meaning', model_col=Value.description),
         ]}
         if self.language:
-            return [
+            cols = [
                 shared['name'],
                 Col(self, 'blt', sTitle='Basic term', model_col=Name.basic_term),
                 CategoriesCol(self, 'categories'),
                 shared['species'],
                 shared['thumbnail'],
-                shared['ipa'],
-                shared['grammatical_info'],
-                shared['meaning'],
-                #shared['references'],
-                UsesCol(self, 'uses', sTitle='Usage'),
             ]
+            if self._type == 'cultural':
+                cols.extend([
+                    HabitatsCol(self, 'habitats'),
+                    Col(self, 'introduced', model_col=Name.introduced),
+                    UsesCol(self, 'uses', sTitle='Usage'),
+                    Col(self, 'importance', model_col=Name.importance),
+                    Col(self, 'associations', model_col=Name.associations),
+                ])
+            else:
+                cols.extend([
+                    shared['ipa'],
+                    shared['grammatical_info'],
+                    shared['meaning'],
+                    #shared['references'],
+                    UsesCol(self, 'uses', sTitle='Usage'),
+                ])
+            return cols
         if self.parameter:
             return [
                 shared['language'],

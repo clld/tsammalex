@@ -376,11 +376,11 @@ class Species(CustomModelMixin, Parameter):
             'eol_id',
             'links']
 
-    @reify
-    def thumbnail(self):
+    def image_url(self, type):
+        """Return the URL for the first image of a certain type."""
         for f in self._files:
-            if 1:  # todo: check tags!
-                return f.jsondatadict['thumbnail']
+            if 1:  # FIXME: check tags!
+                return f.jsondatadict.get(type)
 
     @property
     def tpl_url(self):

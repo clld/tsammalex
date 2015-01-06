@@ -60,8 +60,8 @@ def main(args):
         cat.is_habitat = True
 
     def species_visitor(eol, species, _):
-        species.countries_str = '; '.join([e.name for e in species.countries])
-        species.ecoregions_str = '; '.join([e.name for e in species.ecoregions])
+        species.countries_str = ' '.join([e.id for e in species.countries])
+        species.ecoregions_str = ' '.join([e.id for e in species.ecoregions])
         if eol.get(species.id):
             update_species_data(species, eol[species.id])
         else:
@@ -132,7 +132,12 @@ def prime_cache(args):
 
         vs.description = '; '.join(d)
 
-    # TODO: mark countries/ecoregions without related species as inactive!
+    for model in [models.Country, models.Ecoregion]:
+        for instance in DBSession.query(model).options(
+                joinedload(getattr(model, 'species'))
+        ):
+            if not instance.species:
+                instance.active = False
 
     # TODO: assign ThePlantList ids!
 
