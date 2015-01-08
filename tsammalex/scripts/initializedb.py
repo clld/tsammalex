@@ -23,6 +23,7 @@ from clld.util import nfilter, jsonload
 from tsammalex import models
 from tsammalex.scripts.util import (
     update_species_data, load_ecoregions, from_csv, load_countries, data_files,
+    get_gbif_id,
 )
 
 
@@ -53,16 +54,17 @@ def main(args):
     load_ecoregions(data_file, data)
     load_countries(data)
 
-    def languoid_visitor(lang, _):
-        if lang.id in glottolog:
-            add_language_codes(data, lang, lang.id.split('-')[0], glottolog)
+    def languoid_visitor(lang, row, _):
+        add_language_codes(
+            data, lang, lang.id.split('-')[0], glottolog, glottocode=row[-1] or None)
         if lang.id == 'eng':
             lang.is_english = True
 
-    def habitat_visitor(cat, _):
+    def habitat_visitor(cat, *_):
         cat.is_habitat = True
 
-    def species_visitor(eol, species, _):
+    def species_visitor(eol, species, *_):
+        species.gbif_id = get_gbif_id(data_file, species.id)
         species.countries_str = ' '.join([e.id for e in species.countries])
         species.ecoregions_str = ' '.join([e.id for e in species.ecoregions])
         if eol.get(species.id):

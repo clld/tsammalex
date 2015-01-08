@@ -17,6 +17,15 @@ def data_files(data_file, name):
     return files
 
 
+def get_gbif_id(data_file, sid):
+    fname = data_file('external', 'gbif', '%s.json' % sid)
+    if fname.exists():
+        try:
+            return jsonload(fname)['results'][0]['taxonKey']
+        except:
+            pass
+
+
 def from_csv(data_file, model, data, name=None, visitor=None):
     kw = {'delimiter': ',', 'lineterminator': str('\r\n'), 'quotechar': '"'}
     for fname in data_files(data_file, (name or model.__csv_name__) + '.csv'):
@@ -28,7 +37,7 @@ def from_csv(data_file, model, data, name=None, visitor=None):
             if obj:
                 obj = data.add(model, row[0], _obj=obj)
                 if visitor:
-                    visitor(obj, data)
+                    visitor(obj, row, data)
 
 
 def update_species_data(species, d):

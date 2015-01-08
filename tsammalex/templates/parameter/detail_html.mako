@@ -1,7 +1,7 @@
 <%inherit file="../${context.get('request').registry.settings.get('clld.app_template', 'app.mako')}"/>
 <%namespace name="util" file="../util.mako"/>
 <%! active_menu_item = "parameters" %>
-<%block name="title">${_('Parameter')} ${ctx.name} (${ctx.description})</%block>
+<%block name="title">${ctx.name} (${ctx.english_name})</%block>
 
 <% dt = request.get_datatable('values', h.models.Value, parameter=ctx) %>
 <div style="float: right; margin-top: 10px;">
@@ -32,27 +32,13 @@
             <td>Links:</td>
             <td>
                 <ul class="inline">
-                    % if ctx.eol_url:
+                    % for url, label, title in ctx.links:
                         <li>
-                <span class="large label label-info">
-                    ${h.external_link(ctx.eol_url, 'eol', inverted=True, style="color: white;",)}
-                </span>
+                            <span class="large label label-info">
+                                ${h.external_link(url, label, title=title, inverted=True, style="color: white;",)}
+                            </span>
                         </li>
-                    % endif
-                    % if ctx.wikipedia_url:
-                        <li>
-            <span class="large label label-info">
-                ${h.external_link(ctx.wikipedia_url, 'wikipedia', inverted=True, style="color: white;")}
-            </span>
-                        </li>
-                    % endif
-                    % if ctx.tpl_url:
-                        <li>
-                <span class="large label label-info">
-                    ${h.external_link(ctx.tpl_url, 'ThePlantList', inverted=True, style="color: white;",)}
-                </span>
-                        </li>
-                    % endif
+                    % endfor
                 </ul>
             </td>
         </tr>

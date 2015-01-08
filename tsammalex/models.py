@@ -37,9 +37,18 @@ class Lineage(Base, IdNameDescriptionMixin):
     __csv_name__ = 'lineages'
     glottocode = Column(String)
     color = Column(String, default='ff6600')
+    family = Column(Unicode)
+    family_glottocode = Column(String)
 
     def csv_head(self):
-        return ['id', 'name', 'description', 'glottocode', 'color']
+        return [
+            'id',
+            'name',
+            'description',
+            'glottocode',
+            'family',
+            'family_glottocode',
+            'color']
 
 
 class Use(Base, IdNameDescriptionMixin):
@@ -101,6 +110,7 @@ class Languoid(CustomModelMixin, Language):
     pk = Column(Integer, ForeignKey('language.pk'), primary_key=True)
     lineage_pk = Column(Integer, ForeignKey('lineage.pk'))
     lineage = relationship(Lineage, backref='languoids')
+    glottocode = Column(String)
 
     def csv_head(self):
         return [
@@ -109,7 +119,8 @@ class Languoid(CustomModelMixin, Language):
             'lineage__id',
             'description',
             'latitude',
-            'longitude']
+            'longitude',
+            'glottocode']
 
     @classmethod
     def from_csv(cls, row, data=None):
@@ -333,6 +344,7 @@ class Species(CustomModelMixin, Parameter):
     notes = Column(Unicode)
     eol_id = Column(String)
     tpl_id = Column(String)
+    gbif_id = Column(String)
     ecoregions_str = Column(Unicode)
     countries_str = Column(Unicode)
 
@@ -383,6 +395,16 @@ class Species(CustomModelMixin, Parameter):
                 return f.jsondatadict.get(type)
 
     @property
+    def links(self):
+        return [
+            spec for spec in [
+                (self.eol_url, 'eol', 'Encyclopedia of Life'),
+                (self.wikipedia_url, 'wikipedia', 'Wikipedia'),
+                (self.tpl_url, 'ThePlantList', 'ThePlantList'),
+                (self.gbif_url, 'GBIF', 'GBIF.org'),
+                (self.bhl_url, 'BHL', 'Biodiversity Heritage Library')] if spec[0]]
+
+    @property
     def tpl_url(self):
         if self.tpl_id:
             return 'http://www.theplantlist.org/tpl1.1/record/%s' % self.tpl_id
@@ -391,6 +413,16 @@ class Species(CustomModelMixin, Parameter):
     def eol_url(self):
         if self.eol_id:
             return 'http://eol.org/%s' % self.eol_id
+
+    @property
+    def gbif_url(self):
+        if self.gbif_id:
+            return 'http://www.gbif.org/species/%s' % self.gbif_id
+
+    @property
+    def bhl_url(self):
+        return 'http://www.biodiversitylibrary.org/name/%s' \
+            % self.name.capitalize().replace(' ', '_')
 
     @classmethod
     def from_csv(cls, row, data=None):

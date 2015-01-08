@@ -4,9 +4,13 @@ from sqlalchemy import desc
 
 from clld.web.util.multiselect import MultiSelect
 from clld.db.meta import DBSession
-from clld.db.models.common import Language, Unit
+from clld.db.models.common import Language, Unit, Identifier
 from clld.web.util.htmllib import HTML
 from clld.web.util.helpers import maybe_external_link
+
+
+def glottolog_url(glottocode):
+    return Identifier(name=glottocode, type='glottolog').url()
 
 
 def collapsed(id_, content):

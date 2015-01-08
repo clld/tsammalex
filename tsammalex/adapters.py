@@ -1,6 +1,7 @@
 from itertools import chain
 
 from six import BytesIO
+from six.moves.urllib.request import urlopen
 from docx import Document
 from docx.shared import Inches
 
@@ -87,8 +88,11 @@ class SpeciesDocx(Docx):
 
         document.add_heading('Photos', 1)
         for f in ctx._files:
-            p = req.registry.settings['clld.files'].joinpath(f.relpath)
-            document.add_picture(p, width=Inches(3.5))
+            try:
+                stream = BytesIO(urlopen(f.jsondata['url']).read())
+            except:
+                continue
+            document.add_picture(stream, width=Inches(3.5))
 
             table = document.add_table(rows=0, cols=2)
             for attr in 'date place author permission comments'.split():

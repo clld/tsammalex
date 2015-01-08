@@ -19,6 +19,27 @@ ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
     <div class="tab-content" style="overflow: visible;">
         <div id="description" class="tab-pane">
             <p>${ctx.description or ''}</p>
+            <h4>Classification</h4>
+            <dl>
+                <dt>Lineage</dt>
+                <dd>
+                    ${ctx.lineage.name}
+                    % if ctx.lineage.glottocode:
+                        ${h.external_link(u.glottolog_url(ctx.lineage.glottocode),
+                        label=ctx.lineage.glottocode)}
+                    % endif
+                </dd>
+                % if ctx.lineage.family:
+                    <dt>Family</dt>
+                    <dd>
+                        ${ctx.lineage.family}
+                    % if ctx.lineage.family_glottocode:
+                        ${h.external_link(u.glottolog_url(ctx.lineage.family_glottocode),
+                        label=ctx.lineage.family_glottocode)}
+                    % endif
+                    </dd>
+                % endif
+            </dl>
             % if categories:
                 <h4>Categories</h4>
                 <dl class="dl-horizontal">

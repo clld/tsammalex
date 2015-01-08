@@ -304,7 +304,7 @@ class LineageCol(Col):
     def format(self, item):
         if hasattr(item, 'valueset'):
             item = item.valueset.language
-        return HTML.span(map_marker_img(self.dt.req, item), item.lineage.id)
+        return HTML.span(map_marker_img(self.dt.req, item), item.lineage.name)
 
 
 class EnglishNameCol(LinkCol):
@@ -423,7 +423,10 @@ class Languoids(Languages):
 
     def col_defs(self):
         res = Languages.col_defs(self)
-        return res[:2] + [LineageCol(self, 'lineage')] + res[2:]
+        return res[:2] + [
+            Col(self, 'glottocode', model_col=Languoid.glottocode),
+            LineageCol(self, 'lineage'),
+        ] + res[2:]
 
 
 class BiomeCol(Col):
