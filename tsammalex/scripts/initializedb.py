@@ -5,6 +5,7 @@ import sys
 import json
 from itertools import groupby
 from functools import partial
+import re
 
 from purl import URL
 from path import path
@@ -20,7 +21,9 @@ from clld.lib.bibtex import Database
 from clld.util import nfilter, jsonload
 
 from tsammalex import models
-from tsammalex.scripts.util import update_species_data, load_ecoregions, from_csv, load_countries
+from tsammalex.scripts.util import (
+    update_species_data, load_ecoregions, from_csv, load_countries, data_files,
+)
 
 
 def main(args):
@@ -80,37 +83,43 @@ def main(args):
     ]:
         from_csv(data_file, model, data, **kw)
 
-    for image in reader(data_file('images.csv'), namedtuples=True, delimiter=","):
-        if image.species__id not in data['Species']:
-            continue
+    def image_url(source_url, type_):
+        return re.sub('\.[a-zA-Z]+$', '.jpg', source_url).replace(
+            '/original/', '/%s/' % type_)
 
-        url = URL(image.source_url)
-        if url.host() != 'edmond.mpdl.mpg.de':
-            continue
+    for fname in data_files(data_file, 'images.csv'):
+        for image in reader(fname, namedtuples=True, delimiter=","):
+            if image.species__id not in data['Species']:
+                continue
 
-        jsondata = dict(
-            url=image.source_url,
-            thumbnail=image.source_url.replace('/original/', '/thumbnail/'))
+            url = URL(image.source_url)
+            if url.host() != 'edmond.mpdl.mpg.de':
+                continue
 
-        for k in 'src creator date place comments permission'.split():
-            v = getattr(image, k)
-            if v:
-                if k == 'permission':
-                    jsondata[k] = json.loads(v)
-                elif k == 'src':
-                    pref = 'https://lingweb.eva.mpg.de'
-                    if v.startswith(pref):
-                        v = v[len(pref):]
-                    jsondata[k] = v
-                else:
-                    jsondata[k] = v
-        f = common.Parameter_files(
-            object=data['Species'][image.species__id],
-            id=image.id,
-            name=image.tags,
-            jsondata=jsondata,
-            mime_type=image.mime_type)
-        assert f
+            jsondata = dict(
+                url=image.source_url,
+                thumbnail=image_url(image.source_url, 'thumbnail'),
+                web=image_url(image.source_url, 'web'))
+
+            for k in 'src creator date place comments permission'.split():
+                v = getattr(image, k)
+                if v:
+                    if k == 'permission':
+                        jsondata[k] = json.loads(v)
+                    elif k == 'src':
+                        pref = 'https://lingweb.eva.mpg.de'
+                        if v.startswith(pref):
+                            v = v[len(pref):]
+                        jsondata[k] = v
+                    else:
+                        jsondata[k] = v
+            f = common.Parameter_files(
+                object=data['Species'][image.species__id],
+                id=image.id,
+                name=image.tags,
+                jsondata=jsondata,
+                mime_type=image.mime_type)
+            assert f
 
 
 def prime_cache(args):

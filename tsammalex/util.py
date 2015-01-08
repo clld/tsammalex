@@ -1,3 +1,5 @@
+from __future__ import unicode_literals, print_function, absolute_import, division
+
 from sqlalchemy import desc
 
 from clld.web.util.multiselect import MultiSelect

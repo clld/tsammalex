@@ -8,17 +8,26 @@ from clld.lib.dsv import reader
 from tsammalex.models import Biome, Ecoregion, Country
 
 
+def data_files(data_file, name):
+    files = [data_file(name)]
+    heath = files[0].dirname().joinpath('heath', files[0].basename())
+    if heath.exists():
+        files.append(heath)
+    return files
+
+
 def from_csv(data_file, model, data, name=None, visitor=None):
     kw = {'delimiter': ',', 'lineterminator': str('\r\n'), 'quotechar': '"'}
-    for row in list(reader(data_file((name or model.__csv_name__) + '.csv'), **kw))[1:]:
-        try:
-            obj = model.from_csv(row, data)
-        except KeyError:
-            obj = None
-        if obj:
-            obj = data.add(model, row[0], _obj=obj)
-            if visitor:
-                visitor(obj, data)
+    for fname in data_files(data_file, (name or model.__csv_name__) + '.csv'):
+        for row in list(reader(fname, **kw))[1:]:
+            try:
+                obj = model.from_csv(row, data)
+            except KeyError:
+                obj = None
+            if obj:
+                obj = data.add(model, row[0], _obj=obj)
+                if visitor:
+                    visitor(obj, data)
 
 
 def update_species_data(species, d):
