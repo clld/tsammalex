@@ -5,20 +5,16 @@ from clld.db.meta import DBSession
 
 
 DATA = {
-    'countries': [
-        'BW,Botswana,',
-        'ZA,South Africa,',
-    ],
     'species': [
         'acaciaataxacantha,Acacia ataxacantha,,Flamethorn,Plantae,Fabales,'
         'Fabaceae,Acacia,,,AT1309,BW;ZA,,,,'
         'http://en.wikipedia.org/wiki/Senegalia_ataxacantha,648867,',
     ],
     'lineages': [
-        'germanic,Germanic,,germ1287,dd0000',
+        'germanic,Germanic,,germ1287,,,dd0000',
     ],
     'languages': [
-        'afr,Afrikaans,germanic,,-33.6,19.4',
+        'afr,Afrikaans,germanic,,-33.6,19.4,',
     ],
     'categories': [
         'afr-bome,bome,trees,afr,',

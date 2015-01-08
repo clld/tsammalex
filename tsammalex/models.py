@@ -275,7 +275,7 @@ class Name(CustomModelMixin, Value):
     @classmethod
     def from_csv(cls, row, data=None, description=None):
         obj = cls(**{n: row[i] for i, n in enumerate(cls.__csv_head__) if '__' not in n and n != 'audio'})
-        if not slug(row[1]):
+        if not slug(row[1].decode('utf8') if hasattr(row[1], 'decode') else row[1]):
             obj.active = False
         row = dict(list(zip(cls.__csv_head__, row)))
         sid = row['species__id']
