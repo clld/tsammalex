@@ -1,6 +1,7 @@
 from __future__ import print_function, unicode_literals
 from itertools import groupby
 
+from six.moves import reduce
 from pycountry import countries
 from clld.util import nfilter, jsonload
 from clld.lib.dsv import reader

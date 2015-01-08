@@ -1,6 +1,6 @@
-from cStringIO import StringIO
 from itertools import chain
 
+from six import BytesIO
 from docx import Document
 from docx.shared import Inches
 
@@ -57,7 +57,7 @@ class Docx(Representation):
         #
         # TODO: add tsammalex license information!
         #
-        d = StringIO()
+        d = BytesIO()
         document.save(d)
         d.seek(0)
         return d.read()
@@ -86,9 +86,7 @@ class SpeciesDocx(Docx):
             table.cell(i, 1).text = ', '.join(v.name for v in vs.values)
 
         document.add_heading('Photos', 1)
-        for f in filter(
-                lambda f_: f_.name.startswith('small') or f_.name.startswith('large'),
-                ctx._files):
+        for f in ctx._files:
             p = req.registry.settings['clld.files'].joinpath(f.relpath)
             document.add_picture(p, width=Inches(3.5))
 

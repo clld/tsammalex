@@ -265,7 +265,7 @@ class Name(CustomModelMixin, Value):
     def from_csv(cls, row, data=None, description=None):
         obj = cls(**{n: row[i] for i, n in enumerate(cls.__csv_head__) if '__' not in n and n != 'audio'})
 
-        row = dict(zip(cls.__csv_head__, row))
+        row = dict(list(zip(cls.__csv_head__, row)))
         sid = row['species__id']
         lid = row['language__id']
         vsid = '%s-%s' % (sid, lid)
