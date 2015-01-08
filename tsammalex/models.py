@@ -15,9 +15,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, backref, joinedload_all
 from sqlalchemy.ext.declarative import declared_attr
-from pyramid.decorator import reify
 
 from clld import interfaces
+from clld.util import slug
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
@@ -275,7 +275,8 @@ class Name(CustomModelMixin, Value):
     @classmethod
     def from_csv(cls, row, data=None, description=None):
         obj = cls(**{n: row[i] for i, n in enumerate(cls.__csv_head__) if '__' not in n and n != 'audio'})
-
+        if not slug(row[1]):
+            obj.active = False
         row = dict(list(zip(cls.__csv_head__, row)))
         sid = row['species__id']
         lid = row['language__id']
@@ -395,7 +396,7 @@ class Species(CustomModelMixin, Parameter):
                 return f.jsondatadict.get(type)
 
     @property
-    def links(self):
+    def link_specs(self):
         return [
             spec for spec in [
                 (self.eol_url, 'eol', 'Encyclopedia of Life'),

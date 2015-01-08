@@ -32,7 +32,7 @@
             <td>Links:</td>
             <td>
                 <ul class="inline">
-                    % for url, label, title in ctx.links:
+                    % for url, label, title in ctx.link_specs:
                         <li>
                             <span class="large label label-info">
                                 ${h.external_link(url, label, title=title, inverted=True, style="color: white;",)}
@@ -56,7 +56,7 @@
     % for f in chunk:
         <div class="span4">
             <div class="well">
-                <a href="${f.jsondatadict.get('full')}" title="view image">
+                <a href="${f.jsondatadict.get('url')}" title="view image">
                     <img src="${f.jsondatadict.get('web')}" class="image"/>
                 </a>
             </div>
