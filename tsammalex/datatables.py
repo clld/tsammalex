@@ -8,15 +8,15 @@ from clld.web.datatables.value import Values
 from clld.web.datatables.language import Languages
 from clld.web.datatables.contributor import Contributors, AddressCol, NameCol, UrlCol
 from clld.web.util.helpers import (
-    HTML, external_link, linked_references, button, icon, map_marker_img, link,
+    HTML, external_link, linked_references, button, icon, map_marker_img, maybe_license_link,
 )
 from clld.db.util import get_distinct_values, as_int, icontains
 from clld.db.meta import DBSession
-from clld.db.models.common import Parameter, Value, Language, ValueSet
+from clld.db.models.common import Parameter, Value, Language, ValueSet, Parameter_files
 from clld.util import nfilter
 
 from tsammalex.models import (
-    Ecoregion, SpeciesEcoregion, Biome,
+    Ecoregion, SpeciesEcoregion, Biome, ImageData,
     Country, Lineage,
     Category, Species,
     Name, TsammalexContributor, TsammalexEditor,
@@ -480,6 +480,56 @@ class Ecoregions(DataTable):
         return {'iDisplayLength': 200, 'bPaginate': False}
 
 
+class MD5Col(LinkCol):
+    def format(self, item):
+        return HTML.span(LinkCol.format(self, item), style="font-family: monospace;")
+
+
+class _ThumbnailCol(Col):
+    __kw__ = dict(bSearchable=False, bSortable=False)
+
+    def format(self, item):
+        return HTML.img(src=item.jsondata['thumbnail'])
+
+
+class LicenseCol(Col):
+    def __init__(self, dt, name, **kw):
+        kw['choices'] = [
+            r[0] for r in DBSession.query(ImageData.value)
+            .filter(ImageData.key == 'permission')
+            .order_by(ImageData.value).distinct()]
+        Col.__init__(self, dt, name, **kw)
+
+    def format(self, item):
+        return maybe_license_link(self.dt.req, item.get_data('permission') or '')
+
+
+class Images(DataTable):
+    def __init__(self, *args, **kw):
+        DataTable.__init__(self, *args, **kw)
+        self.License = aliased(ImageData)
+        self.Place = aliased(ImageData)
+
+    def base_query(self, query):
+        return query\
+            .join(self.License, and_(
+                self.License.key == 'permission',
+                self.License.image_pk == Parameter_files.pk))\
+            .join(Parameter_files.object)\
+            .options(contains_eager(Parameter_files.object))
+
+    def col_defs(self):
+        return [
+            MD5Col(self, 'md5', model_col=Parameter_files.id),
+            LicenseCol(self, 'license', model_col=self.License.value),
+            LinkCol(self, 'species', model_col=Parameter.name, get_object=lambda i: i.object),
+            _ThumbnailCol(self, '#'),
+        ]
+
+    def get_options(self):
+        return dict(sAjaxSource=self.req.route_url('images'))
+
+
 def includeme(config):
     config.register_datatable('parameters', SpeciesTable)
     config.register_datatable('values', Names)
@@ -487,3 +537,4 @@ def includeme(config):
     config.register_datatable('languages', Languoids)
     config.register_datatable('contributors', TsammalexContributors)
     config.register_datatable('ecoregions', Ecoregions)
+    config.register_datatable('images', Images)

@@ -62,21 +62,21 @@
             </div>
             <table class="table table-condensed">
                 <tbody>
-                    % for attr in 'source date place author permission comments'.split():
-                        % if f.jsondata.get(attr):
-                            <% value = f.jsondata[attr] %>
+                    % for attr in 'source date place creator permission comments'.split():
+                        <% value = f.get_data(attr) %>
+                        % if value:
                             <tr>
-                                <td>${attr.capitalize()}:</td>
+                                <td><small>${attr.capitalize()}:</small></td>
                                 <td>
+                                    <small>
                                     % if attr == 'permission':
-                                        % if value.get('license'):
-                                        ${h.external_link(value['license'][0], value['license'][1])}
-                                        % endif
+                                        ${h.maybe_license_link(request, value, button='small')}
                                     % elif attr == 'source':
-                                        ${value|n}
+                                        ${h.maybe_external_link(value)}
                                     % else:
                                         ${value}
                                     % endif
+                                    </small>
                                 </td>
                             </tr>
                         % endif

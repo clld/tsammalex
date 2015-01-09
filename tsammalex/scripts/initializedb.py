@@ -103,25 +103,16 @@ def main(args):
                 thumbnail=image_url(image.source_url, 'thumbnail'),
                 web=image_url(image.source_url, 'web'))
 
-            for k in 'src creator date place comments permission'.split():
-                v = getattr(image, k)
-                if v:
-                    if k == 'permission':
-                        jsondata[k] = json.loads(v)
-                    elif k == 'src':
-                        pref = 'https://lingweb.eva.mpg.de'
-                        if v.startswith(pref):
-                            v = v[len(pref):]
-                        jsondata[k] = v
-                    else:
-                        jsondata[k] = v
             f = common.Parameter_files(
                 object=data['Species'][image.species__id],
                 id=image.id,
                 name=image.tags,
                 jsondata=jsondata,
                 mime_type=image.mime_type)
-            assert f
+            for k in 'source creator date place comments permission'.split():
+                v = getattr(image, k)
+                if v:
+                    models.ImageData(key=k, value=v, image=f)
 
 
 def prime_cache(args):

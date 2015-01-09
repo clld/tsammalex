@@ -21,13 +21,29 @@ from clld.util import slug
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
-    Unit, HasSourceMixin, Contributor,
+    Unit, HasSourceMixin, Contributor, Parameter_files,
 )
 
 from tsammalex.interfaces import IEcoregion
 
 
 ID_SEP_PATTERN = re.compile('\.|,|;')
+
+
+class ImageData(Base):
+    image_pk = Column(Integer, ForeignKey('parameter_files.pk'), primary_key=True)
+    key = Column(Unicode, primary_key=True)
+    value = Column(Unicode)
+    image = relationship(Parameter_files, uselist=False, backref='data')
+
+
+def get_data(self, key):
+    for d in self.data:
+        if d.key == key:
+            return d.value
+
+
+Parameter_files.get_data = get_data
 
 
 # -----------------------------------------------------------------------------
@@ -275,7 +291,7 @@ class Name(CustomModelMixin, Value):
     @classmethod
     def from_csv(cls, row, data=None, description=None):
         obj = cls(**{n: row[i] for i, n in enumerate(cls.__csv_head__) if '__' not in n and n != 'audio'})
-        if not slug(row[1].decode('utf8') if hasattr(row[1], 'decode') else row[1]):
+        if not slug(row[1]):
             obj.active = False
         row = dict(list(zip(cls.__csv_head__, row)))
         sid = row['species__id']

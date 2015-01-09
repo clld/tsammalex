@@ -1,7 +1,8 @@
+from __future__ import unicode_literals
+
 from clld.scripts.util import Data
 from clld.tests.util import TestWithEnv
 from clld.db.models import common
-from clld.db.meta import DBSession
 
 
 DATA = {

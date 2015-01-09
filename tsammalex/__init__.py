@@ -1,14 +1,19 @@
 from functools import partial
 
 from six import string_types
+from zope.interface import classImplements
 
 from clld.interfaces import ILanguage, IMapMarker
 from clld.web.app import get_configurator, menu_item, MapMarker
 from clld.web.adapters.base import adapter_factory, Index
+from clld.db.models.common import Parameter_files
 
 # we must make sure custom models are known at database initialization!
 from tsammalex import models
-from tsammalex.interfaces import IEcoregion
+from tsammalex.interfaces import IEcoregion, IImage
+
+
+classImplements(Parameter_files, IImage)
 
 _ = lambda s: s
 _('Parameter')
@@ -49,6 +54,7 @@ def main(global_config, **settings):
         ('parameters', partial(menu_item, 'parameters')),
         ('ecoregions', lambda ctx, req: (req.route_url('ecoregions'), 'Ecoregions')),
         ('sources', partial(menu_item, 'sources')),
+        ('images', partial(menu_item, 'images')),
         ('contributors', partial(menu_item, 'contributors', label='Contribute')),
     )
     config.register_resource('ecoregion', models.Ecoregion, IEcoregion, with_index=True)
@@ -59,4 +65,6 @@ def main(global_config, **settings):
             send_mimetype='text/html',
             extension='snippet.html'),
         IEcoregion)
+
+    config.register_resource('image', Parameter_files, IImage, with_index=True)
     return config.make_wsgi_app()

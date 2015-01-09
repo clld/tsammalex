@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 
 requires = [
-    'clld>=0.16',
+    'clld>=0.27',
     'clldmpg',
     'transaction',
     'pyramid_tm',

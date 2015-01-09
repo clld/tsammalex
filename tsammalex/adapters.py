@@ -95,15 +95,12 @@ class SpeciesDocx(Docx):
             document.add_picture(stream, width=Inches(3.5))
 
             table = document.add_table(rows=0, cols=2)
-            for attr in 'date place author permission comments'.split():
-                if f.jsondata.get(attr):
+            for attr in 'date place creator source permission comments'.split():
+                v = f.get_data(attr)
+                if v:
                     cells = table.add_row().cells
                     cells[0].text = attr.capitalize()
-                    value = f.jsondata[attr]
-                    if attr == 'permission':
-                        if value.get('license'):
-                            value = value['license'][1]
-                    cells[1].text = '%s' % value
+                    cells[1].text = v
 
             # p = document.add_paragraph('A plain paragraph having some ')
             # p.add_run('bold').bold = True
