@@ -25,7 +25,7 @@ ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
                 <dd>
                     ${ctx.lineage.name}
                     % if ctx.lineage.glottocode:
-                        ${h.external_link(u.glottolog_url(ctx.lineage.glottocode),
+                        ${h.external_link(h.glottolog_url(ctx.lineage.glottocode),
                         label=ctx.lineage.glottocode)}
                     % endif
                 </dd>
@@ -34,7 +34,7 @@ ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
                     <dd>
                         ${ctx.lineage.family}
                     % if ctx.lineage.family_glottocode:
-                        ${h.external_link(u.glottolog_url(ctx.lineage.family_glottocode),
+                        ${h.external_link(h.glottolog_url(ctx.lineage.family_glottocode),
                         label=ctx.lineage.family_glottocode)}
                     % endif
                     </dd>

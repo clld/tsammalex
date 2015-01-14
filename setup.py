@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'clld>=0.28',
+    'clld>=0.29',
     'clldmpg',
     'python-docx',
     'pycountry',
@@ -35,5 +35,4 @@ setup(name='tsammalex',
       entry_points="""\
 [paste.app_factory]
 main = tsammalex:main
-""",
-      )
+""")

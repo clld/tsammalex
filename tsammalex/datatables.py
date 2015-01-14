@@ -179,7 +179,11 @@ class SpeciesTable(Parameters):
     def base_query(self, query):
         query = query\
             .outerjoin(SpeciesEcoregion, Ecoregion)\
-            .options(joinedload(Parameter._files))
+            .options(
+                joinedload(Parameter._files),
+                joinedload(Species.ecoregions),
+                joinedload(Species.countries),
+            )
         if self.languages:
             for i, lang in enumerate(self.languages):
                 query = query.outerjoin(
@@ -531,10 +535,12 @@ class Images(DataTable):
 
 
 def includeme(config):
-    config.register_datatable('parameters', SpeciesTable)
-    config.register_datatable('values', Names)
-    config.register_datatable('languages', Languoids)
-    config.register_datatable('languages', Languoids)
-    config.register_datatable('contributors', TsammalexContributors)
-    config.register_datatable('ecoregions', Ecoregions)
-    config.register_datatable('images', Images)
+    for route_name, cls in dict(
+        parameters=SpeciesTable,
+        values=Names,
+        languages=Languoids,
+        contributors=TsammalexContributors,
+        ecoregions=Ecoregions,
+        images=Images,
+    ).items():
+        config.register_datatable(route_name, cls)

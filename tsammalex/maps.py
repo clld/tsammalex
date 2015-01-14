@@ -84,6 +84,9 @@ class EcoregionsMap(Map):
 
 
 def includeme(config):
-    config.register_map('parameter', SpeciesMap)
-    config.register_map('languages', LanguoidMap)
-    config.register_map('ecoregions', EcoregionsMap)
+    for route_name, cls in dict(
+        parameter=SpeciesMap,
+        languages=LanguoidMap,
+        ecoregions=EcoregionsMap,
+    ).items():
+        config.register_map(route_name, cls)

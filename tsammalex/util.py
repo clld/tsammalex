@@ -1,31 +1,34 @@
 from __future__ import unicode_literals, print_function, absolute_import, division
 
-from sqlalchemy import desc
-
 from clld.web.util.multiselect import MultiSelect
 from clld.db.meta import DBSession
-from clld.db.models.common import Language, Unit, Identifier
+from clld.db.models.common import Language, Unit
 from clld.web.util.htmllib import HTML
-from clld.web.util.helpers import maybe_external_link, collapsed, glottolog_url
+from clld.web.util.helpers import maybe_external_link, collapsed
 
 
-def tr_rel(ctx, name, label=None, dt='name', dd='description'):
-    items = getattr(ctx, name)
-    if not items:
-        return ''
+def with_attr(f):
+    def wrapper(ctx, name, *args, **kw):
+        kw['attr'] = getattr(ctx, name)
+        if not kw['attr']:
+            return ''
+        return f(ctx, name, *args, **kw)
+    return wrapper
+
+
+@with_attr
+def tr_rel(ctx, name, label=None, dt='name', dd='description', attr=None):
     content = []
-    for item in items:
+    for item in attr:
         content.extend([HTML.dt(getattr(item, dt)), HTML.dd(getattr(item, dd))])
     content = HTML.dl(*content, class_='dl-horizontal')
-    if len(items) > 3:
+    if len(attr) > 3:
         content = collapsed('collapsed-' + name, content)
     return HTML.tr(HTML.td((label or name.capitalize()) + ':'), HTML.td(content))
 
 
-def tr_attr(ctx, name, label=None, content=None):
-    attr = getattr(ctx, name)
-    if not attr:
-        return ''
+@with_attr
+def tr_attr(ctx, name, label=None, content=None, attr=None):
     return HTML.tr(
         HTML.td((label or name.capitalize()) + ':'),
         HTML.td(content or maybe_external_link(attr)))

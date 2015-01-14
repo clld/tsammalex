@@ -13,7 +13,7 @@ from sqlalchemy import (
     true,
     false,
 )
-from sqlalchemy.orm import relationship, backref, joinedload_all
+from sqlalchemy.orm import relationship, backref, joinedload_all, joinedload
 from sqlalchemy.ext.declarative import declared_attr
 
 from clld import interfaces
@@ -404,6 +404,14 @@ class Species(CustomModelMixin, Parameter):
             'wikipedia_url',
             'eol_id',
             'links']
+
+    @classmethod
+    def csv_query(cls, session, type_=None):
+        return Parameter.csv_query(session).options(
+            joinedload(Species.ecoregions),
+            joinedload(Species.countries),
+            joinedload(Species.references),
+        )
 
     def image_url(self, type):
         """Return the URL for the first image of a certain type."""

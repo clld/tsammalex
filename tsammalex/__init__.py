@@ -1,11 +1,10 @@
-from functools import partial
+from __future__ import unicode_literals, absolute_import, division, print_function
 
 from six import string_types
 from zope.interface import classImplements
 
 from clld.interfaces import ILanguage, IMapMarker
-from clld.web.app import get_configurator, menu_item, MapMarker
-from clld.web.adapters.base import adapter_factory, Index
+from clld.web.app import get_configurator, MapMarker
 from clld.db.models.common import Parameter_files
 
 # we must make sure custom models are known at database initialization!
@@ -13,6 +12,7 @@ from tsammalex import models
 from tsammalex.interfaces import IEcoregion, IImage
 
 
+# associate Parameter_files with the IImage interface to make the model work as resource.
 classImplements(Parameter_files, IImage)
 
 _ = lambda s: s
@@ -48,23 +48,14 @@ def main(global_config, **settings):
         'tsammalex', (TsammalexMapMarker(), IMapMarker), settings=settings)
     config.include('clldmpg')
     config.register_menu(
-        ('dataset', partial(menu_item, 'dataset', label='Home')),
-        ('values', partial(menu_item, 'values')),
-        ('languages', partial(menu_item, 'languages')),
-        ('parameters', partial(menu_item, 'parameters')),
-        ('ecoregions', lambda ctx, req: (req.route_url('ecoregions'), 'Ecoregions')),
-        ('sources', partial(menu_item, 'sources')),
-        ('images', partial(menu_item, 'images')),
-        ('contributors', partial(menu_item, 'contributors', label='Contribute')),
-    )
+        ('dataset', dict(label='Home')),
+        'values',
+        'languages',
+        'parameters',
+        'ecoregions',
+        'sources',
+        'images',
+        ('contributors', dict(label='Contribute')))
     config.register_resource('ecoregion', models.Ecoregion, IEcoregion, with_index=True)
-    config.register_adapter(
-        adapter_factory(
-            'ecoregion/snippet_html.mako',
-            mimetype='application/vnd.clld.snippet+xml',
-            send_mimetype='text/html',
-            extension='snippet.html'),
-        IEcoregion)
-
     config.register_resource('image', Parameter_files, IImage, with_index=True)
     return config.make_wsgi_app()
