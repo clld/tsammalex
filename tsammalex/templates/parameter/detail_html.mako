@@ -8,7 +8,10 @@
     ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
 </div>
 
-<h2>${ctx.description or ctx.name}</h2>
+<h2>
+    <span style="font-style: italic">${ctx.name}</span>
+    <span style="font-size: smaller">(${ctx.english_name})</span>
+</h2>
 
 <div class="row-fluid">
     <div class="span6">
