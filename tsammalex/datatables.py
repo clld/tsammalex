@@ -316,7 +316,7 @@ class EnglishNameCol(LinkCol):
         return {'label': self.get_obj(item).english_name}
 
 
-class NameCol(LinkCol):
+class SortableNameCol(LinkCol):
     def order(self):
         return collkey(Value.name)
 
@@ -356,7 +356,7 @@ class Names(Values):
     def col_defs(self):
         get_param = lambda i: i.valueset.parameter
         shared = {col.name: col for col in [
-            NameCol(self, 'name'),
+            SortableNameCol(self, 'name'),
             Col(self, 'ipa', sTitle='IPA', model_col=Name.ipa),
             Col(self, 'grammatical_info', model_col=Name.grammatical_info),
             LinkCol(
