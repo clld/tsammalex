@@ -10,7 +10,7 @@ from clld.web.datatables.contributor import Contributors, AddressCol, NameCol, U
 from clld.web.util.helpers import (
     HTML, external_link, linked_references, button, icon, map_marker_img, maybe_license_link,
 )
-from clld.db.util import get_distinct_values, as_int, icontains
+from clld.db.util import get_distinct_values, as_int, icontains, collkey
 from clld.db.meta import DBSession
 from clld.db.models.common import Parameter, Value, Language, ValueSet, Parameter_files
 from clld.util import nfilter
@@ -316,6 +316,11 @@ class EnglishNameCol(LinkCol):
         return {'label': self.get_obj(item).english_name}
 
 
+class NameCol(LinkCol):
+    def order(self):
+        return collkey(Value.name) if self.dt.req.with_pg_collkey else Value.name
+
+
 class Names(Values):
     def __init__(self, req, model, eid=None, **kw):
         self._type = req.params.get('type', kw.pop('type', ''))
@@ -351,7 +356,7 @@ class Names(Values):
     def col_defs(self):
         get_param = lambda i: i.valueset.parameter
         shared = {col.name: col for col in [
-            LinkCol(self, 'name'),
+            NameCol(self, 'name'),
             Col(self, 'ipa', sTitle='IPA', model_col=Name.ipa),
             Col(self, 'grammatical_info', model_col=Name.grammatical_info),
             LinkCol(
