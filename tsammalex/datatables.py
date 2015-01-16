@@ -318,7 +318,7 @@ class EnglishNameCol(LinkCol):
 
 class NameCol(LinkCol):
     def order(self):
-        return collkey(Value.name) if self.dt.req.with_pg_collkey else Value.name
+        return collkey(Value.name)
 
 
 class Names(Values):

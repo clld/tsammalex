@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'clld>=0.31',
+    'clld>=0.31.2',
     'clldmpg',
     'python-docx',
     'pycountry',

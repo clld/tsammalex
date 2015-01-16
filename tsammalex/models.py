@@ -12,12 +12,14 @@ from sqlalchemy import (
     Boolean,
     true,
     false,
+    Index,
 )
 from sqlalchemy.orm import relationship, backref, joinedload_all, joinedload
 from sqlalchemy.ext.declarative import declared_attr
 
 from clld import interfaces
 from clld.util import slug
+from clld.db.util import collkey
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,

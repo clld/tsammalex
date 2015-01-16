@@ -2,7 +2,6 @@
 # pragma: no cover
 from __future__ import unicode_literals, division, absolute_import, print_function
 import sys
-import json
 from itertools import groupby
 from functools import partial
 import re
@@ -10,10 +9,12 @@ import re
 from purl import URL
 from path import path
 from sqlalchemy.orm import joinedload
+from sqlalchemy import Index
 from clld.scripts.util import (
     initializedb, Data, bibtex2source, glottocodes_by_isocode, add_language_codes,
     ExistingDir,
 )
+from clld.db.util import collkey, with_collkey_ddl
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib.dsv import reader
@@ -27,8 +28,14 @@ from tsammalex.scripts.util import (
 )
 
 
+# Make sure, the collkey functions are defined, before trying to create an index.
+with_collkey_ddl()
+
+
 def main(args):
-    def data_file(*comps): 
+    Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
+
+    def data_file(*comps):
         return path(args.data_repos).joinpath('tsammalexdata', 'data', *comps)
 
     data = Data()
@@ -115,31 +122,11 @@ def main(args):
                     models.ImageData(key=k, value=v, image=f)
 
 
-COLLKEY_SQL = """
-CREATE OR REPLACE FUNCTION collkey (text, text, bool, int4, bool) RETURNS bytea
-  LANGUAGE 'c' IMMUTABLE STRICT AS
-  '$libdir/collkey_icu.so',
-  'pgsqlext_collkey';
-
-CREATE OR REPLACE FUNCTION collkey (text, text) RETURNS bytea
-  LANGUAGE SQL IMMUTABLE STRICT AS $$
-  SELECT collkey ($1, $2, false, 0, true);
-  $$;
-
-CREATE OR REPLACE FUNCTION collkey (text) RETURNS bytea
-  LANGUAGE SQL IMMUTABLE STRICT AS $$
-  SELECT collkey ($1, 'root', false, 0, true);
-  $$;
-"""
-
-
 def prime_cache(args):
     """If data needs to be denormalized for lookup, do that here.
     This procedure should be separate from the db initialization, because
     it will have to be run periodically whenever data has been updated.
     """
-    DBSession.execute(COLLKEY_SQL)
-
     for vs in DBSession.query(common.ValueSet).options(
             joinedload(common.ValueSet.values)):
         d = []
