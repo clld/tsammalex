@@ -5,5 +5,5 @@
 
 <p>
     The data served by this web application is available as CSV files in a
-    <a href="https://github.com/clld/tsammalex-data/tree/master/dump">GitHub repository</a>.
+    <a href="https://github.com/clld/tsammalex-data/tree/master/tsammalexdata">GitHub repository</a>.
 </p>
