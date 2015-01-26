@@ -193,8 +193,7 @@ class SpeciesTable(Parameters):
 
             query = query \
                 .filter(or_(*[
-                    self._langs[i].pk != null() for i in range(len(self._langs))]))\
-                .options(joinedload_all(Parameter.valuesets, ValueSet.values))
+                    self._langs[i].pk != null() for i in range(len(self._langs))]))
         return query.distinct()
 
     def col_defs(self):

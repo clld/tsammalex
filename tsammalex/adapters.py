@@ -90,7 +90,7 @@ class SpeciesDocx(Docx):
         for f in ctx._files:
             try:
                 stream = BytesIO(urlopen(f.jsondata['url']).read())
-            except:
+            except:  # pragma: no cover
                 continue
             document.add_picture(stream, width=Inches(3.5))
 

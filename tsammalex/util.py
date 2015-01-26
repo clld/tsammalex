@@ -11,7 +11,7 @@ def with_attr(f):
     def wrapper(ctx, name, *args, **kw):
         kw['attr'] = getattr(ctx, name)
         if not kw['attr']:
-            return ''
+            return ''  # pragma: no cover
         return f(ctx, name, *args, **kw)
     return wrapper
 

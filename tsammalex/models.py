@@ -32,6 +32,20 @@ from tsammalex.interfaces import IEcoregion
 ID_SEP_PATTERN = re.compile('\.|,|;')
 
 
+def parse_ref_ids(s):
+    for i, ref in enumerate(s.split(';')):
+        rid, pages = ref, None
+        if '[' in ref:
+            rid, pages = ref.split('[', 1)
+            try:
+                assert pages.endswith(']')
+                pages = pages[:-1]
+            except:  # pragma: no cover
+                print(s)
+                #raise
+        yield i, rid, pages
+
+
 class ImageData(Base):
     image_pk = Column(Integer, ForeignKey('parameter_files.pk'), primary_key=True)
     key = Column(Unicode, primary_key=True)
@@ -185,15 +199,6 @@ class Category(CustomModelMixin, Unit):
     def meaning(self, value):
         self.description = value
 
-    @classmethod
-    def csv_query(cls, session, type_=None):
-        query = Unit.csv_query(session)
-        if type_ == 'categories':
-            query = query.filter(cls.is_habitat == false())
-        elif type == 'habitats':
-            query = query.filter(cls.is_habitat == true())
-        return query
-
     def csv_head(self):
         return ['id', 'name', 'description', 'language__id', 'notes']
 
@@ -312,17 +317,7 @@ class Name(CustomModelMixin, Value):
                 contribution=data['Contribution']['tsammalex'])
 
         if row['refs__ids']:
-            for i, ref in enumerate(row['refs__ids'].split(';')):
-                if '[' in ref:
-                    rid, pages = ref.split('[', 1)
-                    try:
-                        assert pages.endswith(']')
-                    except:  # pragma: no cover
-                        print(row['refs__ids'])
-                        raise
-                    pages = pages[:-1]
-                else:
-                    rid, pages = ref, None
+            for i, rid, pages in parse_ref_ids(row['refs__ids']):
                 data.add(
                     NameReference, '%s-%s' % (obj.id, i),
                     name=obj,
@@ -465,18 +460,7 @@ class Species(CustomModelMixin, Parameter):
                     else:
                         print('unknown %s: %s' % (model, id_))
         if row[14]:
-            for i, ref in enumerate(row[14].split(';')):
-                if '[' in ref:
-                    rid, pages = ref.split('[', 1)
-                    try:
-                        assert pages.endswith(']')
-                        pages = pages[:-1]
-                    except:  # pragma: no cover
-                        print(row[14])
-                        #raise
-                    #pages = pages[:-1]
-                else:
-                    rid, pages = ref, None
+            for i, rid, pages in parse_ref_ids(row[14]):
                 data.add(
                     SpeciesReference, '%s-%s' % (obj.id, i),
                     species=obj,
