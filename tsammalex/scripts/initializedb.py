@@ -60,12 +60,16 @@ def main(args):
 
     load_ecoregions(data_file, data)
     load_countries(data)
+    second_languages = {}
 
     def languoid_visitor(lang, row, _):
-        add_language_codes(
-            data, lang, lang.id.split('-')[0], glottolog, glottocode=row[-1] or None)
-        if lang.id == 'eng':
-            lang.is_english = True
+        try:
+            add_language_codes(
+                data, lang, lang.id.split('-')[0], glottolog, glottocode=row[2] or None)
+        except:
+            print(row)
+            raise
+        second_languages[row[0]] = row[8]
 
     def habitat_visitor(cat, *_):
         cat.is_habitat = True
@@ -91,6 +95,11 @@ def main(args):
         (models.Name, {}),
     ]:
         from_csv(data_file, model, data, **kw)
+
+    for key, ids in second_languages.items():
+        target = data['Languoid'][key]
+        for lid in models.split_ids(ids):
+            target.second_languages.append(data['Languoid'][lid])
 
     def image_url(source_url, type_):
         return re.sub('\.[a-zA-Z]+$', '.jpg', source_url).replace(

@@ -1,10 +1,22 @@
 from __future__ import unicode_literals, print_function, absolute_import, division
 
+from purl import URL
+
 from clld.web.util.multiselect import MultiSelect
 from clld.db.meta import DBSession
 from clld.db.models.common import Language, Unit
 from clld.web.util.htmllib import HTML
 from clld.web.util.helpers import maybe_external_link, collapsed
+
+
+def source_link(source):
+    label = source
+    host = URL(source).host()
+    if host == 'commons.wikimedia.org':
+        label = 'wikimedia'
+    elif host == 'en.wikipedia.org':
+        label = 'wikipedia'
+    return maybe_external_link(source, label=label)
 
 
 def with_attr(f):

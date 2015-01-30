@@ -32,6 +32,12 @@ from tsammalex.interfaces import IEcoregion
 ID_SEP_PATTERN = re.compile('\.|,|;')
 
 
+def split_ids(s):
+    if not s:
+        return []
+    return sorted(set(i.strip() for i in ID_SEP_PATTERN.split(s) if i.strip()))
+
+
 def parse_ref_ids(s):
     for i, ref in enumerate(s.split(';')):
         rid, pages = ref, None
@@ -136,6 +142,12 @@ class TsammalexEditor(CustomModelMixin, Editor):
     sections = Column(Unicode)
 
 
+class SecondLanguoid(Base):
+    """Relate languoids with "Verkehrssprachen"."""
+    first_pk = Column(Integer, ForeignKey('languoid.pk'))
+    second_pk = Column(Integer, ForeignKey('languoid.pk'))
+
+
 @implementer(interfaces.ILanguage)
 class Languoid(CustomModelMixin, Language):
     __csv_name__ = 'languages'
@@ -143,21 +155,34 @@ class Languoid(CustomModelMixin, Language):
     lineage_pk = Column(Integer, ForeignKey('lineage.pk'))
     lineage = relationship(Lineage, backref='languoids')
     glottocode = Column(String)
+    region = Column(Unicode)
+
+    @declared_attr
+    def second_languages(cls):
+        secondary = SecondLanguoid.__table__
+        return relationship(
+            cls,
+            secondary=secondary,
+            primaryjoin=cls.pk == secondary.c.first_pk,
+            secondaryjoin=cls.pk == secondary.c.second_pk)
 
     def csv_head(self):
         return [
             'id',
             'name',
-            'lineage__id',
+            'glottocode',
             'description',
+            'lineages__id',
             'latitude',
             'longitude',
-            'glottocode']
+            'region',
+            'languages__ids',
+        ]
 
     @classmethod
     def from_csv(cls, row, data=None):
         obj = super(Languoid, cls).from_csv(row)
-        obj.lineage = data['Lineage'][row[2]]
+        obj.lineage = data['Lineage'][row[4]]
         return obj
 
 
@@ -328,10 +353,8 @@ class Name(CustomModelMixin, Value):
             ('habitats', 'Category'),
             ('uses', 'Use')
         ]:
-            if row[rel + '__ids']:
-                for id_ in set(ID_SEP_PATTERN.split(row[rel + '__ids'])):
-                    if id_.strip():
-                        getattr(obj, rel).append(data[cls][id_.strip()])
+            for id_ in split_ids(row[rel + '__ids']):
+                getattr(obj, rel).append(data[cls][id_.strip()])
         return obj
 
 
@@ -452,13 +475,12 @@ class Species(CustomModelMixin, Parameter):
         for index, attr, model in [
             (11, 'countries', 'Country'), (10, 'ecoregions', 'Ecoregion')
         ]:
-            for id_ in ID_SEP_PATTERN.split(row[index]):
-                if id_.strip():
-                    if id_ in data[model]:
-                        coll = getattr(obj, attr)
-                        coll.append(data[model][id_.strip()])
-                    else:
-                        print('unknown %s: %s' % (model, id_))
+            for id_ in split_ids(row[index]):
+                if id_ in data[model]:
+                    coll = getattr(obj, attr)
+                    coll.append(data[model][id_.strip()])
+                else:
+                    print('unknown %s: %s' % (model, id_))
         if row[14]:
             for i, rid, pages in parse_ref_ids(row[14]):
                 data.add(

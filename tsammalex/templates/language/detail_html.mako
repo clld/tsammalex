@@ -40,6 +40,14 @@ ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
                     </dd>
                 % endif
             </dl>
+            % if ctx.second_languages:
+                <h4>Link Languages</h4>
+                <ul class="unstyled">
+                    % for l in ctx.second_languages:
+                <li>${h.link(request, l)}</li>
+                    % endfor
+                </ul>
+            % endif
             % if categories:
                 <h4>Categories</h4>
                 <dl class="dl-horizontal">

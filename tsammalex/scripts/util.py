@@ -30,14 +30,18 @@ def from_csv(data_file, model, data, name=None, visitor=None):
     kw = {'delimiter': ',', 'lineterminator': str('\r\n'), 'quotechar': '"'}
     for fname in data_files(data_file, (name or model.__csv_name__) + '.csv'):
         for row in list(reader(fname, **kw))[1:]:
-            try:
-                obj = model.from_csv(row, data)
-            except KeyError:
-                obj = None
-            if obj:
-                obj = data.add(model, row[0], _obj=obj)
-                if visitor:
-                    visitor(obj, row, data)
+            if row:
+                try:
+                    obj = model.from_csv(row, data)
+                except (KeyError, IndexError):
+                    obj = None
+                    print(fname)
+                    print(row)
+                    raise
+                if obj:
+                    obj = data.add(model, row[0], _obj=obj)
+                    if visitor:
+                        visitor(obj, row, data)
 
 
 def update_species_data(species, d):

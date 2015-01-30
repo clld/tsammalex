@@ -75,7 +75,7 @@
                                     % if attr == 'permission':
                                         ${h.maybe_license_link(request, value, button='small')}
                                     % elif attr == 'source':
-                                        ${h.maybe_external_link(value)}
+                                        ${u.source_link(value)}
                                     % else:
                                         ${value}
                                     % endif
