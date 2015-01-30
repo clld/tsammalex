@@ -17,15 +17,6 @@ def data_files(data_file, name):
     return files
 
 
-def get_gbif_id(data_file, sid):
-    fname = data_file('external', 'gbif', '%s.json' % sid)
-    if fname.exists():
-        try:
-            return jsonload(fname)['results'][0]['taxonKey']
-        except:
-            pass
-
-
 def from_csv(data_file, model, data, name=None, visitor=None):
     kw = {'delimiter': ',', 'lineterminator': str('\r\n'), 'quotechar': '"'}
     for fname in data_files(data_file, (name or model.__csv_name__) + '.csv'):
@@ -44,25 +35,26 @@ def from_csv(data_file, model, data, name=None, visitor=None):
                         visitor(obj, row, data)
 
 
-def update_species_data(species, d):
-    if not species.eol_id:
-        species.eol_id = d['identifier']
+def update_taxon_data(taxon, d, data):
+    for attr in [
+        'eol_id',
+        'gbif_id',
+        'catalogueoflife_url',
+        'wikipedia_url',
+        'kingdom',
+        'order',
+        'genus',
+        'family'
+    ]:
+        setattr(taxon, attr, d.get(attr))
 
-    if not species.english_name:
-        for vn in d.get('vernacularNames', []):
-            if vn['language'] == 'en' and vn['eol_preferred']:
-                species.english_name = vn['vernacularName']
-                break
+    if d.get('taxonRank'):
+        taxon.rank = d['taxonRank'].lower()
 
-    for an in d.get('ancestors', []):
-        if not an.get('taxonRank'):
-            continue
-        for tr in ['kingdom', 'family', 'order', 'genus']:
-            if tr == an['taxonRank']:
-                curr = getattr(species, tr)
-                if curr != an['scientificName']:
-                    #print(tr, ':', curr, '-->', an['scientificName'])
-                    setattr(species, tr, an['scientificName'])
+    for attr, model in dict(ecoregions='Ecoregion', countries='Country').items():
+        collection = getattr(taxon, attr)
+        for id_ in d[attr]:
+            collection.append(data[model][id_])
 
 
 def get_center(arr):

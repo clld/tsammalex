@@ -23,8 +23,7 @@ from clld.util import nfilter, jsonload
 
 from tsammalex import models
 from tsammalex.scripts.util import (
-    update_species_data, load_ecoregions, from_csv, load_countries, data_files,
-    get_gbif_id,
+    update_taxon_data, load_ecoregions, from_csv, load_countries, data_files,
 )
 
 
@@ -74,16 +73,15 @@ def main(args):
     def habitat_visitor(cat, *_):
         cat.is_habitat = True
 
-    def species_visitor(eol, species, *_):
-        species.gbif_id = get_gbif_id(data_file, species.id)
-        species.countries_str = ' '.join([e.id for e in species.countries])
-        species.ecoregions_str = ' '.join([e.id for e in species.ecoregions])
-        if eol.get(species.id):
-            update_species_data(species, eol[species.id])
+    def taxon_visitor(auto, taxon, *_):
+        if auto.get(taxon.id):
+            update_taxon_data(taxon, auto[taxon.id], data)
         else:
-            print('--> missing eol id:', species.name)
+            print('--> missing in taxa.json:', taxon.id, taxon.name)
+        taxon.countries_str = ' '.join([e.id for e in taxon.countries])
+        taxon.ecoregions_str = ' '.join([e.id for e in taxon.ecoregions])
 
-    eol = jsonload(data_file('external', 'eol.json'))
+    auto = {s['id']: s for s in jsonload(data_file('taxa.json'))}
     for model, kw in [
         (models.Lineage, {}),
         (models.Use, {}),
@@ -91,7 +89,7 @@ def main(args):
         (models.Languoid, dict(visitor=languoid_visitor)),
         (models.Category, dict(name='categories')),
         (models.Category, dict(name='habitats', visitor=habitat_visitor)),
-        (models.Species, dict(visitor=partial(species_visitor, eol))),
+        (models.Taxon, dict(visitor=partial(taxon_visitor, auto))),
         (models.Name, {}),
     ]:
         from_csv(data_file, model, data, **kw)
@@ -107,7 +105,7 @@ def main(args):
 
     for fname in data_files(data_file, 'images.csv'):
         for image in reader(fname, namedtuples=True, delimiter=","):
-            if image.species__id not in data['Species']:
+            if image.taxa__id not in data['Taxon']:
                 continue
 
             url = URL(image.source_url)
@@ -120,7 +118,7 @@ def main(args):
                 web=image_url(image.source_url, 'web'))
 
             f = common.Parameter_files(
-                object=data['Species'][image.species__id],
+                object=data['Taxon'][image.taxa__id],
                 id=image.id,
                 name=image.tags,
                 jsondata=jsondata,
@@ -152,9 +150,9 @@ def prime_cache(args):
 
     for model in [models.Country, models.Ecoregion]:
         for instance in DBSession.query(model).options(
-                joinedload(getattr(model, 'species'))
+                joinedload(getattr(model, 'taxa'))
         ):
-            if not instance.species:
+            if not instance.taxa:
                 instance.active = False
 
     # TODO: assign ThePlantList ids!

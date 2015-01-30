@@ -14,7 +14,7 @@ ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
         <li><a href="#description" data-toggle="tab">Description</a></li>
         <li class="active"><a href="#names" data-toggle="tab">Names (linguistic view)</a></li>
         <li><a href="#cultural" data-toggle="tab">Names (cultural view)</a></li>
-        ##<li><a href="#species" data-toggle="tab">Species (bilingual comparative view)</a></li>
+        ##<li><a href="#taxa" data-toggle="tab">Species (bilingual comparative view)</a></li>
     </ul>
     <div class="tab-content" style="overflow: visible;">
         <div id="description" class="tab-pane">
@@ -64,7 +64,7 @@ ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
         <div id="cultural" class="tab-pane">
             ${request.get_datatable('values', h.models.Value, language=ctx, type='cultural').render()}
         </div>
-        ##<div id="species" class="tab-pane">
+        ##<div id="taxa" class="tab-pane">
         ##    ${request.get_datatable('values', h.models.Value, language=ctx).render()}
         ##</div>
     </div>

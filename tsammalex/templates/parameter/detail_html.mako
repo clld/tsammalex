@@ -9,6 +9,7 @@
 </div>
 
 <h2>
+    <span>${ctx.rank.capitalize()}</span>
     <span style="font-style: italic">${ctx.name}</span>
     <span style="font-size: smaller">(${ctx.english_name})</span>
 </h2>

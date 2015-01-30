@@ -9,7 +9,7 @@
 </p>
     <ol>
         <li><a href="${request.route_url('languages')}">Languages</a> > Individual languages > Names (linguistic, cultural and bilingual comparative views), and </li>
-        <li><a href="${request.route_url('parameters')}">Species</a> > Individual species (multilingual comparative view)</li>
+        <li><a href="${request.route_url('parameters')}">Taxa</a> > Individual taxa (multilingual comparative view)</li>
     </ol>
 <div>
     ${ctx.render()}

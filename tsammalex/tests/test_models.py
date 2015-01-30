@@ -9,10 +9,9 @@ DATA = {
     'contributors': [
         'nc,"Naumann, Christfried",,1,,"M P I",Tsammalex,http://example.org,',
     ],
-    'species': [
+    'taxa': [
         'acaciaataxacantha,Acacia ataxacantha,,Flamethorn,Plantae,Fabales,'
-        'Fabaceae,Acacia,,,AT1309,BW;ZA,,,ref1;ref2[20],'
-        'http://en.wikipedia.org/wiki/Senegalia_ataxacantha,648867,',
+        'Fabaceae,Acacia,,,BW;ZA,,,ref1;ref2[20],',
     ],
     'lineages': [
         'germanic,Germanic,,germ1287,,,dd0000',
@@ -46,7 +45,7 @@ class Tests(TestWithEnv):
 
         for name, cls in [
             ('contributors', m.TsammalexContributor),
-            ('species', m.Species),
+            ('taxa', m.Taxon),
             ('lineages', m.Lineage),
             ('languages', m.Languoid),
             ('categories', m.Category),

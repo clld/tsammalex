@@ -17,12 +17,12 @@
             <td>Area (km<sup>2</sup>):</td>
             <td>${ctx.area}</td>
         </tr>
-        % if ctx.species:
+        % if ctx.taxa:
             <tr>
-                <td>Species in Tsammalex:</td>
+                <td>Taxa in Tsammalex:</td>
                 <td>
                     <a href="${request.route_url('parameters', _query=dict(er=ctx.id))}"
-                       title="show related species (${len(ctx.species)})">${len(ctx.species)}</a>
+                       title="show related species (${len(ctx.taxa)})">${len(ctx.taxa)}</a>
                 </td>
             </tr>
         % endif

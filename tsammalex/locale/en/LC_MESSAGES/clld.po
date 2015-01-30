@@ -19,11 +19,11 @@ msgstr ""
 
 #: tsammalex/__init__.py:12
 msgid "Parameter"
-msgstr "Species"
+msgstr "Taxon"
 
 #: tsammalex/__init__.py:13
 msgid "Parameters"
-msgstr "Species"
+msgstr "Taxa"
 
 #: tsammalex/__init__.py:14
 msgid "Source"

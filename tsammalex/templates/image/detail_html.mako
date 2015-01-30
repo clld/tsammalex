@@ -17,7 +17,7 @@
         <table class="table table-condensed">
             <tbody>
                 <tr>
-                    <td>Species:</td>
+                    <td>Taxon:</td>
                     <td>${h.link(request, ctx.object)}</td>
                 </tr>
                 % for attr in 'source date place creator permission comments'.split():

@@ -12,7 +12,7 @@
     <form>
         <fieldset>
             <p>
-                Select up to 2 languages for which to display common names of species:
+                Select up to 2 languages for which to display common names of taxa:
             </p>
             ${select.render()}
             <button class="btn" type="submit">Submit</button>

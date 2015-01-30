@@ -8,7 +8,8 @@ from clld.web.datatables.value import Values
 from clld.web.datatables.language import Languages
 from clld.web.datatables.contributor import Contributors, AddressCol, NameCol, UrlCol
 from clld.web.util.helpers import (
-    HTML, external_link, linked_references, button, icon, map_marker_img, maybe_license_link,
+    HTML, external_link, linked_references, button, icon, map_marker_img,
+    maybe_license_link, glottolog_url,
 )
 from clld.db.util import get_distinct_values, as_int, icontains, collkey
 from clld.db.meta import DBSession
@@ -16,9 +17,9 @@ from clld.db.models.common import Parameter, Value, Language, ValueSet, Paramete
 from clld.util import nfilter
 
 from tsammalex.models import (
-    Ecoregion, SpeciesEcoregion, Biome, ImageData,
+    Ecoregion, TaxonEcoregion, Biome, ImageData,
     Country, Lineage,
-    Category, Species,
+    Category, Taxon,
     Name, TsammalexContributor, TsammalexEditor,
     Languoid, NameReference, NameCategory, Use, NameUse, NameHabitat,
 )
@@ -84,12 +85,12 @@ class _CategoryCol(Col):
 class EcoregionCountryColBase(Col):
     __kw__ = {'sortable': False}
 
-    def __init__(self, model, species_col, *args, **kw):
-        self.species_col = species_col
+    def __init__(self, model, taxon_col, *args, **kw):
+        self.taxon_col = taxon_col
         kw['choices'] = [
             (o.id, '%s %s' % (o.id, o.name)) for o in
             DBSession.query(model).filter(model.active == true()).order_by(model.id)]
-        kw['model_col'] = getattr(Species, self.species_col)
+        kw['model_col'] = getattr(Taxon, self.taxon_col)
         Col.__init__(self, *args, **kw)
 
     def search(self, qs):
@@ -99,11 +100,11 @@ class EcoregionCountryColBase(Col):
         return ' '.join(items)
 
     def format(self, item):
-        items = (getattr(item, self.species_col) or '').split()
+        items = (getattr(item, self.taxon_col) or '').split()
         content = self.content(items)
         if len(items) < 4:
             return content
-        return collapsed('%s-%s' % (self.species_col, item.id), content)
+        return collapsed('%s-%s' % (self.taxon_col, item.id), content)
 
 
 class EcoregionCol(EcoregionCountryColBase):
@@ -145,7 +146,7 @@ class CommonNameCol(Col):
 class ClassificationCol(Col):
     def __init__(self, *args, **kw):
         choices = set()
-        for row in DBSession.query(Species.order, Species.family, Species.genus):
+        for row in DBSession.query(Taxon.order, Taxon.family, Taxon.genus):
             for name in row:
                 if name:
                     choices.add(name)
@@ -156,13 +157,13 @@ class ClassificationCol(Col):
         return format_classification(item)
 
     def search(self, qs):
-        return or_(Species.order == qs, Species.family == qs, Species.genus == qs)
+        return or_(Taxon.order == qs, Taxon.family == qs, Taxon.genus == qs)
 
     def order(self):
-        return [Species.order, Species.family, Species.genus]
+        return [Taxon.order, Taxon.family, Taxon.genus]
 
 
-class SpeciesTable(Parameters):
+class TaxaTable(Parameters):
     def __init__(self, req, *args, **kw):
         Parameters.__init__(self, req, *args, **kw)
         if kw.get('languages'):
@@ -177,13 +178,7 @@ class SpeciesTable(Parameters):
             aliased(ValueSet, name='l%s' % i) for i in range(len(self.languages))]
 
     def base_query(self, query):
-        query = query\
-            .outerjoin(SpeciesEcoregion, Ecoregion)\
-            .options(
-                joinedload(Parameter._files),
-                joinedload(Species.ecoregions),
-                joinedload(Species.countries),
-            )
+        query = query.options(joinedload(Parameter._files))
         if self.languages:
             for i, lang in enumerate(self.languages):
                 query = query.outerjoin(
@@ -202,17 +197,18 @@ class SpeciesTable(Parameters):
             er_col.js_args['sFilter'] = self.req.params['er']
 
         res = [
-            LinkCol(self, 'name', sTitle='Species'),
-            Col(self, 'english_name', model_col=Species.english_name),
+            LinkCol(self, 'name', sTitle='Taxon'),
+            Col(self, 'english_name', model_col=Taxon.english_name),
             ClassificationCol(self, 'order', sTitle='Biological classification'),
             ThumbnailCol(self, 'thumbnail'),
             # TODO: second thumbnail?
-            Col(self, 'characteristics', model_col=Species.characteristics)
         ]
         if self.languages:
             for i, lang in enumerate(self.languages):
                 res.append(CommonNameCol(self, 'cn%s' % i, lang, self._langs[i]))
             #res.append(_CategoryCol(self, 'categories', self.languages, bSortable=False))
+        else:
+            res.append(Col(self, 'characteristics', model_col=Taxon.characteristics))
 
         res.extend([er_col, CountriesCol(self, 'countries')])
         # TODO: characteristics col?
@@ -362,7 +358,7 @@ class Names(Values):
                 self, 'language',
                 model_col=Language.name,
                 get_object=lambda i: i.valueset.language),
-            LinkCol(self, 'species', model_col=Parameter.name, get_object=get_param),
+            LinkCol(self, 'taxon', model_col=Parameter.name, get_object=get_param),
             ThumbnailCol(self, 'thumbnail', sTitle='', get_object=get_param),
             RefsCol(self, 'references'),
             Col(self, 'meaning', model_col=Value.description),
@@ -372,7 +368,7 @@ class Names(Values):
                 shared['name'],
                 Col(self, 'blt', sTitle='Basic term', model_col=Name.basic_term),
                 CategoriesCol(self, 'categories'),
-                shared['species'],
+                shared['taxon'],
                 shared['thumbnail'],
             ]
             if self._type == 'cultural':
@@ -411,10 +407,10 @@ class Names(Values):
             shared['language'],
             shared['ipa'],
             shared['grammatical_info'],
-            shared['species'],
+            shared['taxon'],
             EnglishNameCol(
                 self, 'english name',
-                model_col=Species.english_name,
+                model_col=Taxon.english_name,
                 get_object=get_param),
             shared['thumbnail'],
             shared['references'],
@@ -431,8 +427,12 @@ class Languoids(Languages):
 
     def col_defs(self):
         res = Languages.col_defs(self)
-        return res[:2] + [
-            Col(self, 'glottocode', model_col=Languoid.glottocode),
+        return res[1:2] + [
+            Col(self,
+                'glottocode',
+                model_col=Languoid.glottocode,
+                format=lambda i: '' if not i.glottocode
+                else external_link(glottolog_url(i.glottocode), i.glottocode)),
             LineageCol(self, 'lineage'),
         ] + res[2:]
 
@@ -468,8 +468,7 @@ class Ecoregions(DataTable):
     def base_query(self, query):
         return query\
             .join(Ecoregion.biome)\
-            .filter(Ecoregion.realm == 'Afrotropics')\
-            .options(contains_eager(Ecoregion.biome), joinedload(Ecoregion.species))
+            .options(contains_eager(Ecoregion.biome), joinedload(Ecoregion.taxa))
 
     def col_defs(self):
         return [
@@ -530,7 +529,7 @@ class Images(DataTable):
         return [
             MD5Col(self, 'md5', model_col=Parameter_files.id),
             LicenseCol(self, 'license', model_col=self.License.value),
-            LinkCol(self, 'species', model_col=Parameter.name, get_object=lambda i: i.object),
+            LinkCol(self, 'taxon', model_col=Parameter.name, get_object=lambda i: i.object),
             _ThumbnailCol(self, '#'),
         ]
 
@@ -540,7 +539,7 @@ class Images(DataTable):
 
 def includeme(config):
     for route_name, cls in dict(
-        parameters=SpeciesTable,
+        parameters=TaxaTable,
         values=Names,
         languages=Languoids,
         contributors=TsammalexContributors,

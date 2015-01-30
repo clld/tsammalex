@@ -15,7 +15,7 @@
     In the current preliminary version (work in progress), it is focused on the Kalahari region of
     Southern Africa. It is meant as a platform for scholars of lexicology in vernacular languages
     and other users (biologists, language planners, communities, and individual users) to share
-    free images, to search for biological species, and to compare lexical data.
+    free images, to search for biological taxa, and to compare lexical data.
 </p>
 <p>
     Contributors and comments are very welcome. It has been set up by Robert Forkel and compiled
@@ -31,7 +31,7 @@
 </p>
 <p>
     Tsammalex is a database including linguistic, anthropological and biological information
-    about plant and animal species. It is a resource for linguists, anthropologists and other
+    about plant and animal taxa. It is a resource for linguists, anthropologists and other
     researchers as well as for speech communities interested in the conservation of their biological
     knowledge. Sensitive information that may cause harm to communities and their environment,
     or that may threaten biological species (such as information about specific ways of killing

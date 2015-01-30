@@ -1,7 +1,7 @@
 <%inherit file="../tsammalex.mako"/>
 <%! active_menu_item = "ecoregions" %>
 
-<h2>WWF's Terrestrial Ecoregions of the Afrotropics</h2>
+<h2>WWF's Terrestrial Ecoregions</h2>
 <p>
     Data on ecoregions is taken from the World Wildlife Fund's <i>Terrestrial Ecoregions of the World</i>
     version 2.0 from 2004. Ecoregion borders have been simplified using the modified Visvalingam

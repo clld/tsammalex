@@ -10,16 +10,12 @@ from sqlalchemy import (
     ForeignKey,
     Float,
     Boolean,
-    true,
-    false,
-    Index,
 )
 from sqlalchemy.orm import relationship, backref, joinedload_all, joinedload
 from sqlalchemy.ext.declarative import declared_attr
 
 from clld import interfaces
 from clld.util import slug
-from clld.db.util import collkey
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
@@ -237,7 +233,7 @@ class Category(CustomModelMixin, Unit):
 @implementer(interfaces.IValue)
 class Name(CustomModelMixin, Value):
     """
-    A name for a species in a particular language.
+    A name for a taxon in a particular language.
 
     name: the word form
     """
@@ -245,8 +241,8 @@ class Name(CustomModelMixin, Value):
     __csv_head__ = [
         'id',
         'name',
-        'language__id',  # 2
-        'species__id',  # 3
+        'languages__id',  # 2
+        'taxa__id',  # 3
         'ipa',
         'audio',  # will be removed!
         'grammatical_info',
@@ -326,8 +322,8 @@ class Name(CustomModelMixin, Value):
         if not slug(row[1]):
             obj.active = False
         row = dict(list(zip(cls.__csv_head__, row)))
-        sid = row['species__id']
-        lid = row['language__id']
+        sid = row['taxa__id']
+        lid = row['languages__id']
         vsid = '%s-%s' % (sid, lid)
         if vsid in data['ValueSet']:
             obj.valueset = data['ValueSet'][vsid]
@@ -337,7 +333,7 @@ class Name(CustomModelMixin, Value):
             obj.valueset = data.add(
                 ValueSet, vsid,
                 id=vsid,
-                parameter=data['Species'][sid],
+                parameter=data['Taxon'][sid],
                 language=data['Languoid'][lid],
                 contribution=data['Contribution']['tsammalex'])
 
@@ -367,8 +363,8 @@ class NameReference(Base, HasSourceMixin):
 
 
 @implementer(interfaces.IParameter)
-class Species(CustomModelMixin, Parameter):
-    __csv_name__ = 'species'
+class Taxon(CustomModelMixin, Parameter):
+    __csv_name__ = 'taxa'
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
     english_name = Column(Unicode)  # , nullable=False)
     family = Column(Unicode)
@@ -379,11 +375,12 @@ class Species(CustomModelMixin, Parameter):
     biotope = Column(Unicode)
     general_uses = Column(Unicode)
     notes = Column(Unicode)
-    eol_id = Column(String)
-    tpl_id = Column(String)
-    gbif_id = Column(String)
+    eol_id = Column(Integer)
+    gbif_id = Column(Integer)
+    catalogueoflife_url = Column(String)
     ecoregions_str = Column(Unicode)
     countries_str = Column(Unicode)
+    rank = Column(Unicode, default='species')
 
     wikipedia_url = Column(String)
     links = Column(Unicode)
@@ -396,19 +393,11 @@ class Species(CustomModelMixin, Parameter):
     def scientific_name(self, value):
         self.name = value
 
-    @property
-    def species_description(self):
-        return self.description
-
-    @species_description.setter
-    def species_description(self, value):
-        self.description = value
-
     def csv_head(self):
         return [
             'id',
             'scientific_name',
-            'species_description',
+            'description',
             'english_name',
             'kingdom',
             'order',
@@ -416,21 +405,18 @@ class Species(CustomModelMixin, Parameter):
             'genus',
             'characteristics',
             'biotope',
-            'ecoregions__ids',  # 10
-            'countries__ids',  # 11
+            'countries__ids',  # 10
             'general_uses',  # ?
             'notes',
-            'refs__ids',  # 14
-            'wikipedia_url',
-            'eol_id',
+            'refs__ids',  # 13
             'links']
 
     @classmethod
     def csv_query(cls, session, type_=None):
         return Parameter.csv_query(session).options(
-            joinedload(Species.ecoregions),
-            joinedload(Species.countries),
-            joinedload(Species.references),
+            joinedload(Taxon.ecoregions),
+            joinedload(Taxon.countries),
+            joinedload(Taxon.references),
         )
 
     def image_url(self, type):
@@ -442,77 +428,69 @@ class Species(CustomModelMixin, Parameter):
     @property
     def link_specs(self):
         return [
-            spec for spec in [
-                (self.eol_url, 'eol', 'Encyclopedia of Life'),
-                (self.wikipedia_url, 'wikipedia', 'Wikipedia'),
-                (self.tpl_url, 'ThePlantList', 'ThePlantList'),
-                (self.gbif_url, 'GBIF', 'GBIF.org'),
-                (self.bhl_url, 'BHL', 'Biodiversity Heritage Library')] if spec[0]]
-
-    @property
-    def tpl_url(self):
-        if self.tpl_id:
-            return 'http://www.theplantlist.org/tpl1.1/record/%s' % self.tpl_id
-
-    @property
-    def eol_url(self):
-        if self.eol_id:
-            return 'http://eol.org/%s' % self.eol_id
-
-    @property
-    def gbif_url(self):
-        if self.gbif_id:
-            return 'http://www.gbif.org/species/%s' % self.gbif_id
-
-    @property
-    def bhl_url(self):
-        return 'http://www.biodiversitylibrary.org/name/%s' \
-            % self.name.capitalize().replace(' ', '_')
+            spec[1:] for spec in [
+                (
+                    self.eol_id,
+                    'http://eol.org/%s' % self.eol_id,
+                    'eol',
+                    'Encyclopedia of Life'),
+                (
+                    self.wikipedia_url,
+                    self.wikipedia_url,
+                    'wikipedia',
+                    'Wikipedia'),
+                (
+                    self.gbif_id,
+                    'http://www.gbif.org/species/%s' % self.gbif_id,
+                    'GBIF',
+                    'GBIF.org'),
+                (
+                    self.catalogueoflife_url,
+                    self.catalogueoflife_url,
+                    'CatalogueOfLife',
+                    'The Catalogue of Life'),
+                (
+                    True,
+                    'http://www.biodiversitylibrary.org/name/%s'
+                    % self.name.capitalize().replace(' ', '_'),
+                    'BHL',
+                    'Biodiversity Heritage Library')] if spec[0]]
 
     @classmethod
     def from_csv(cls, row, data=None):
-        obj = super(Species, cls).from_csv(row)
-        for index, attr, model in [
-            (11, 'countries', 'Country'), (10, 'ecoregions', 'Ecoregion')
-        ]:
-            for id_ in split_ids(row[index]):
-                if id_ in data[model]:
-                    coll = getattr(obj, attr)
-                    coll.append(data[model][id_.strip()])
-                else:
-                    print('unknown %s: %s' % (model, id_))
+        obj = super(Taxon, cls).from_csv(row)
         if row[14]:
-            for i, rid, pages in parse_ref_ids(row[14]):
+            for i, rid, pages in parse_ref_ids(row[13]):
                 data.add(
-                    SpeciesReference, '%s-%s' % (obj.id, i),
-                    species=obj,
+                    TaxonReference, '%s-%s' % (obj.id, i),
+                    taxon=obj,
                     source=data['Bibrec'][rid],
                     description=pages or None)
 
         return obj
 
 
-class SpeciesReference(Base, HasSourceMixin):
-    species_pk = Column(Integer, ForeignKey('species.pk'))
-    species = relationship(Species, backref="references")
+class TaxonReference(Base, HasSourceMixin):
+    taxon_pk = Column(Integer, ForeignKey('taxon.pk'))
+    taxon = relationship(Taxon, backref="references")
 
 
-class SpeciesCountry(Base):
-    species_pk = Column(Integer, ForeignKey('species.pk'))
+class TaxonCountry(Base):
+    taxon_pk = Column(Integer, ForeignKey('taxon.pk'))
     country_pk = Column(Integer, ForeignKey('country.pk'))
 
 
 class Country(Base, IdNameDescriptionMixin):
     @declared_attr
-    def species(cls):
+    def taxa(cls):
         return relationship(
-            Species,
-            secondary=SpeciesCountry.__table__,
+            Taxon,
+            secondary=TaxonCountry.__table__,
             backref=backref('countries', order_by=str('Country.id')))
 
 
-class SpeciesEcoregion(Base):
-    species_pk = Column(Integer, ForeignKey('species.pk'))
+class TaxonEcoregion(Base):
+    taxon_pk = Column(Integer, ForeignKey('taxon.pk'))
     ecoregion_pk = Column(Integer, ForeignKey('ecoregion.pk'))
 
 
@@ -583,10 +561,10 @@ class Ecoregion(Base, IdNameDescriptionMixin):
         return ['id', 'name', 'description']
 
     @declared_attr
-    def species(cls):
+    def taxa(cls):
         return relationship(
-            Species,
-            secondary=SpeciesEcoregion.__table__,
+            Taxon,
+            secondary=TaxonEcoregion.__table__,
             backref=backref('ecoregions', order_by=str('Ecoregion.id')))
 
     def wwf_url(self):

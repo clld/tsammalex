@@ -34,7 +34,7 @@ class GeoJsonEcoregions(GeoJson):
                 }
 
 
-class GeoJsonSpecies(GeoJsonParameterMultipleValueSets):
+class GeoJsonTaxa(GeoJsonParameterMultipleValueSets):
     def feature_properties(self, ctx, req, p):
         return {
             'label': ', '.join(v.name for v in chain(*[vs.values for vs in p[1]]))}
@@ -68,7 +68,7 @@ class LanguageDocx(Docx):
     def write(self, ctx, req, document):
         document.add_heading(ctx.name, 0)
         table = document.add_table(rows=len(ctx.valuesets) + 1, cols=2)
-        table.cell(0, 0).text = 'Species'
+        table.cell(0, 0).text = 'Taxon'
         table.cell(0, 1).text = 'Name'
 
         for i, vs in enumerate(ctx.valuesets):
@@ -76,7 +76,7 @@ class LanguageDocx(Docx):
             table.cell(i + 1, 1).text = ', '.join(v.name for v in vs.values)
 
 
-class SpeciesDocx(Docx):
+class TaxonDocx(Docx):
     def write(self, ctx, req, document):
         document.add_heading(ctx.name, 0)
         document.add_heading('Names', 1)
@@ -135,7 +135,7 @@ class SpeciesDocx(Docx):
 
 def includeme(config):
     config.register_adapter(LanguageDocx, ILanguage)
-    config.register_adapter(SpeciesDocx, IParameter)
+    config.register_adapter(TaxonDocx, IParameter)
     config.register_adapter(GeoJsonEcoregions, IEcoregion, IIndex)
-    config.register_adapter(GeoJsonSpecies, IParameter)
+    config.register_adapter(GeoJsonTaxa, IParameter)
     config.register_adapter(GeoJsonLanguoids, ILanguage, IIndex)
