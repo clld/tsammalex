@@ -16,29 +16,46 @@
     Southern Africa. It is meant as a platform for scholars of lexicology in vernacular languages
     and other users (biologists, language planners, communities, and individual users) to share
     free images, to search for biological taxa, and to compare lexical data.
+
+
+    Tsammalex is a multilingual lexical database on plants and animals including linguistic,
+    anthropological and biological information as well as images. It has been set up as a
+    resource for linguists, anthropologists and other researchers, language planners and
+    speech communities interested in the conservation of their biological knowledge.
+    In the current version, it is still focused on particular geographical regions reflecting the
+    interests of the present contributors (Kalahari basin in Southern Africa, Dogon languages in West Africa).
+</p>
+<p class="lead">
+    Lexical and biological data can be accessed directly (tabs
+    "Names" and
+    "Taxa", respectively)
+    or filtered for specific languages ("Languages") or geographical regions ("Ecoregions" and "Countries"),
+    with varying details. The tabs "References" and "Images" include lists of sources and individual
+    images, while "Contribute!" provides more information, especially for potential contributors.
 </p>
 <p>
-    Contributors and comments are very welcome. It has been set up by Robert Forkel and compiled
-    by Christfried Naumann with the support of Kathrin Heiden, Lena Sell and Noémie Jaulgey (data)
-    as well as Peter Fröhlich, Hans-Jörg Bibiko, Jan Klom and Stefan Koch (former set-up).
+    Tsammalex has been developed by Robert Forkel and compiled by Christfried Naumann, Lena Sell, Noémie Jaulgey
+    and Kathrin Heiden. Peter Fröhlich, Hans-Jörg Bibiko, Jan Klom and Stefan Koch were involved in
+    former versions of the database. Significant amounts of data were added by
+    ${h.external_link('http://dogonlanguages.org', label='Steven Moran and colleagues (Dogon languages)')}.
 </p>
 <p>
-    The project is
-    funded by the Max Planck Insititute for Evolutionary Anthropology's Department of Linguistics,
+    The project is funded by the Max Planck Insititute for Evolutionary Anthropology's Department of Linguistics,
     led by Bernard Comrie. Tsammalex is published as part of the
     ${h.external_link('http://clld.org', 'Cross-Linguistic Linked Data')} project,
     led by Martin Haspelmath.
 </p>
 <p>
-    Tsammalex is a database including linguistic, anthropological and biological information
-    about plant and animal taxa. It is a resource for linguists, anthropologists and other
-    researchers as well as for speech communities interested in the conservation of their biological
-    knowledge. Sensitive information that may cause harm to communities and their environment,
-    or that may threaten biological species (such as information about specific ways of killing
-    animals or detailed information on medical uses) should not be included here. Cultural knowledge
-    should not be published without the consent of the communities it belongs to.
+    The content of this web site including the downloadable database, is published under a
+    ${request.dataset.jsondatadict['license_name']} (unless stated otherwise).
 </p>
 <p>
-    The content of this web site including the downloadable database, is published under a
-    ${request.dataset.jsondatadict['license_name']} License (unless stated otherwise).
+    Contributions and comments are highly appreciated! Read more information under "Contribute!".
+</p>
+<p>
+    All images and other data included in this database should be under creative commons license.
+    Sensitive information that may cause conflicts in communities or harm to their environment, or
+    that may threaten biological species (such as information about specific ways of killing animals
+    or detailed information on medical uses) must not be included here. Cultural knowledge should
+    not be published without the consent of the communities it belongs to.
 </p>

@@ -41,7 +41,7 @@ def main(args):
     data.add(common.Dataset, 'tsammalex',
         id="tsammalex",
         name="Tsammalex",
-        description="A lexical database on plants and animals",
+        description="Tsammalex: A lexical database on plants and animals",
         publisher_name="Max Planck Institute for Evolutionary Anthropology",
         publisher_place="Leipzig",
         publisher_url="http://www.eva.mpg.de",
