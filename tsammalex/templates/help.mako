@@ -15,7 +15,6 @@
 <p>
     The structure of the database is based on
     ${h.external_link('http://en.wikipedia.org/wiki/Comma-separated_values', label='csv tables')}
-    http://en.wikipedia.org/wiki/Comma-separated_values
     ("...csv"), i.e., a simple file format that can
     be opened and edited in editors such as Notepad, or calculation programs such as LibreOffice Calc or
     Microsoft Excel.
@@ -27,6 +26,8 @@
     file containing all
     references cited. Images of species (licensed as Creative Commons or in Public domain) might be
     uploaded to websites such as Flickr or Wikimedia Commons and linked, or sent to the editors.
+    For more information on the structure of the data and on planned improvements refer to
+    <a href="${request.static_url('tsammalex:static/Tsammalex-Manual.pdf')}">the manual [PDF]</a>.
 </p>
 ##<p>
 ##    Here you can download the following items:
@@ -53,12 +54,16 @@
     Notes:
 </p>
 <ul>
-    <li>lexical data in "names.csv" must be associated with one species (or another biological taxon, such as a genus)</li>
-    <li>any species (or other taxon) referred to under "names.csv" must be included previously under "species.csv"</li>
+    <li>Lexical data in "names.csv" must be associated with one species (or another biological taxon, such as a genus).</li>
+    <li>Any species (or other taxon) referred to under "names.csv" must be included previously under "species.csv".</li>
     <li>
         The consistency of the data in the tsammalex-data repository is checked by
         ${h.external_link('https://travis-ci.org/clld/tsammalex-data', label='Travis-CI')},
         so if you choose to add data using pull request, you get the added benefit of having your additions
         cross-checked while you are working on them.
+    </li>
+    <li>
+        Further information on the rationale behind curating the data in this way are available
+        in ${h.external_link('http://clld.org/2015/02/03/open-source-research-data.html', label='this post')}.
     </li>
 </ul>
