@@ -46,6 +46,7 @@ def main(global_config, **settings):
     """
     config = get_configurator(
         'tsammalex', (TsammalexMapMarker(), IMapMarker), settings=settings)
+    config.registry.settings['home_comp'].append('contributors')
     config.include('clldmpg')
     config.register_menu(
         ('dataset', dict(label='Home')),
@@ -55,7 +56,9 @@ def main(global_config, **settings):
         'ecoregions',
         'sources',
         'images',
-        ('contributors', dict(label='Contribute')))
+        #('contributors', dict(label='Contribute'))
+        ('contribute', lambda ctx, req: (req.route_url('help'), 'Contribute!'))
+    )
     config.register_resource('ecoregion', models.Ecoregion, IEcoregion, with_index=True)
     config.register_resource('image', Parameter_files, IImage, with_index=True)
     return config.make_wsgi_app()

@@ -11,36 +11,43 @@
 <h2>Welcome to Tsammalex</h2>
 
 <p class="lead">
-    Tsammalex is a multilingual lexical database on plants and animals including an image repository.
-    In the current preliminary version (work in progress), it is focused on the Kalahari region of
-    Southern Africa. It is meant as a platform for scholars of lexicology in vernacular languages
-    and other users (biologists, language planners, communities, and individual users) to share
-    free images, to search for biological taxa, and to compare lexical data.
-
-
-    Tsammalex is a multilingual lexical database on plants and animals including linguistic,
-    anthropological and biological information as well as images. It has been set up as a
-    resource for linguists, anthropologists and other researchers, language planners and
-    speech communities interested in the conservation of their biological knowledge.
-    In the current version, it is still focused on particular geographical regions reflecting the
-    interests of the present contributors (Kalahari basin in Southern Africa, Dogon languages in West Africa).
+Tsammalex is a multilingual lexical database on plants and animals
+including linguistic, anthropological and biological information as well
+as images. It has been set up as a resource for linguists,
+anthropologists and other researchers, language planners and speech
+communities interested in the conservation of their biological
+knowledge. In the current version, it is still focused on particular
+geographical regions reflecting the interests of the present
+contributors (Kalahari basin in Southern Africa, Dogon languages in West
+Africa).
 </p>
 <p class="lead">
     Lexical and biological data can be accessed directly (tabs
-    "Names" and
-    "Taxa", respectively)
-    or filtered for specific languages ("Languages") or geographical regions ("Ecoregions" and "Countries"),
-    with varying details. The tabs "References" and "Images" include lists of sources and individual
-    images, while "Contribute!" provides more information, especially for potential contributors.
+    <a href="${request.route_url('values')}">"Names"</a> and
+    <a href="${request.route_url('parameters')}">"Taxa"</a>, respectively)
+    or filtered for specific languages (<a href="${request.route_url('languages')}">"Languages"</a>)
+    or geographical regions (<a href="${request.route_url('ecoregions')}">"Ecoregions"</a>
+    ## and "Countries"
+    ),
+    with varying details. The tabs <a href="${request.route_url('sources')}">"References"</a> and
+    <a href="${request.route_url('images')}">"Images"</a> include lists of sources and individual
+    images, while <a href="${request.route_url('contributors')}">"Contribute!"</a> provides more information,
+    especially for potential contributors.
 </p>
 <p>
-    Tsammalex has been developed by Robert Forkel and compiled by Christfried Naumann, Lena Sell, Noémie Jaulgey
-    and Kathrin Heiden. Peter Fröhlich, Hans-Jörg Bibiko, Jan Klom and Stefan Koch were involved in
-    former versions of the database. Significant amounts of data were added by
-    ${h.external_link('http://dogonlanguages.org', label='Steven Moran and colleagues (Dogon languages)')}.
+    Tsammalex has been developed by
+    ${h.external_link('https://github.com/xrotwang', label='Robert Forkel')}
+    and compiled by Christfried Naumann, Lena Sell, Noémie Jaulgey
+    and Kathrin Heiden. Significant amounts of data were added by
+    ${h.external_link('http://dogonlanguages.org', label='Jeffrey Heath and colleagues (Dogon Languages Project)')}
+    and added by Steven Moran and Robert Forkel.
+    Peter Fröhlich, Hans-Jörg Bibiko, Jan Klom and Stefan Koch were involved in
+    former versions of the database.
 </p>
 <p>
-    The project is funded by the Max Planck Insititute for Evolutionary Anthropology's Department of Linguistics,
+    The project is funded by the
+    ${h.external_link('http://www.eva.mpg.de/', label="Max Planck Insititute for Evolutionary Anthropology's")}
+    ${h.external_link('http://www.eva.mpg.de/linguistics/index.html', label="Department of Linguistics")},
     led by Bernard Comrie. Tsammalex is published as part of the
     ${h.external_link('http://clld.org', 'Cross-Linguistic Linked Data')} project,
     led by Martin Haspelmath.

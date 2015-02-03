@@ -483,9 +483,6 @@ class Ecoregions(DataTable):
             Col(self, 'w', sTitle='', format=lambda i: external_link(i.wwf_url(), 'WWF'))
         ]
 
-    def get_options(self):
-        return {'iDisplayLength': 200, 'bPaginate': False}
-
 
 class MD5Col(LinkCol):
     def format(self, item):
