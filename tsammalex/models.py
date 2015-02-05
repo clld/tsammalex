@@ -367,9 +367,12 @@ class Taxon(CustomModelMixin, Parameter):
     __csv_name__ = 'taxa'
     pk = Column(Integer, ForeignKey('parameter.pk'), primary_key=True)
     english_name = Column(Unicode)  # , nullable=False)
-    family = Column(Unicode)
+    synonyms = Column(Unicode)
     genus = Column(Unicode)
+    family = Column(Unicode)
     order = Column(Unicode)
+    class_ = Column(Unicode)
+    phylum = Column(Unicode)
     kingdom = Column(Unicode)
     characteristics = Column(Unicode)
     biotope = Column(Unicode)
@@ -397,18 +400,21 @@ class Taxon(CustomModelMixin, Parameter):
         return [
             'id',
             'scientific_name',
+            'synonyms',
             'description',
             'english_name',
             'kingdom',
+            'phylum',
+            'class_',
             'order',
             'family',
             'genus',
             'characteristics',
             'biotope',
-            'countries__ids',  # 10
+            'countries__ids',  # 13
             'general_uses',  # ?
             'notes',
-            'refs__ids',  # 13
+            'refs__ids',  # 16
             'links']
 
     @classmethod
@@ -419,10 +425,20 @@ class Taxon(CustomModelMixin, Parameter):
             joinedload(Taxon.references),
         )
 
-    def image_url(self, type):
-        """Return the URL for the first image of a certain type."""
-        for f in self._files:
-            if 1:  # FIXME: check tags!
+    def image_url(self, type, tag=None, index=None):
+        """Return the URL for the first image of a certain type.
+
+        There are two ways to select specific images:
+        - by index
+        - by tag
+
+        So the following API is supported:
+        url = taxon.image_url(t, tag='thumbnail1') or taxon.image_url(t, index=0)
+        """
+        for i, f in enumerate(sorted(self._files, key=lambda f: f.id)):
+            if index == i:
+                return f.jsondatadict.get(type)
+            if tag is None or tag in f.jsondata['tags']:
                 return f.jsondatadict.get(type)
 
     @property
@@ -459,8 +475,8 @@ class Taxon(CustomModelMixin, Parameter):
     @classmethod
     def from_csv(cls, row, data=None):
         obj = super(Taxon, cls).from_csv(row)
-        if row[14]:
-            for i, rid, pages in parse_ref_ids(row[13]):
+        if row[16]:
+            for i, rid, pages in parse_ref_ids(row[16]):
                 data.add(
                     TaxonReference, '%s-%s' % (obj.id, i),
                     taxon=obj,

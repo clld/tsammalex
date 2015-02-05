@@ -90,14 +90,16 @@ def main(args):
         (models.Category, dict(name='categories')),
         (models.Category, dict(name='habitats', visitor=habitat_visitor)),
         (models.Taxon, dict(visitor=partial(taxon_visitor, auto))),
-        (models.Name, {}),
+        (models.Name, dict(filter_=lambda r: 'xxx' not in r[1])),
     ]:
         from_csv(data_file, model, data, **kw)
 
     for key, ids in second_languages.items():
         target = data['Languoid'][key]
         for lid in models.split_ids(ids):
-            target.second_languages.append(data['Languoid'][lid])
+            if lid in data['Languoid']:
+                # we ignore 2nd languages which are not yet in Tsammalex.
+                target.second_languages.append(data['Languoid'][lid])
 
     def image_url(source_url, type_):
         return re.sub('\.[a-zA-Z]+$', '.jpg', source_url).replace(
@@ -113,6 +115,7 @@ def main(args):
                 continue
 
             jsondata = dict(
+                tags=image.tags,
                 url=image.source_url,
                 thumbnail=image_url(image.source_url, 'thumbnail'),
                 web=image_url(image.source_url, 'web'))

@@ -52,7 +52,9 @@ class ThumbnailCol(Col):
     __kw__ = dict(bSearchable=False, bSortable=False)
 
     def format(self, item):
-        thumbnail = self.get_obj(item).image_url('thumbnail')
+        taxon = self.get_obj(item)
+        thumbnail = taxon.image_url('thumbnail', tag='thumbnail1') \
+            or taxon.image_url('thumbnail', index=0)
         if thumbnail:
             return HTML.img(src=thumbnail)
         return ''
@@ -341,7 +343,12 @@ class Names(Values):
                     joinedload(Name.categories))
         if not self.language and not self.parameter:
             query = query.join(ValueSet.language).join(ValueSet.parameter)
-        if not self.parameter:
+
+        if self.parameter:
+            query = query.join(Languoid.lineage).options(
+                joinedload_all(Value.valueset, ValueSet.language, Languoid.lineage)
+            )
+        else:
             query = query.options(joinedload(
                 Value.valueset, ValueSet.parameter, Parameter._files))
         return query.options(
@@ -516,7 +523,7 @@ class Images(DataTable):
 
     def base_query(self, query):
         return query\
-            .join(self.License, and_(
+            .outerjoin(self.License, and_(
                 self.License.key == 'permission',
                 self.License.image_pk == Parameter_files.pk))\
             .join(Parameter_files.object)\

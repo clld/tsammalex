@@ -10,7 +10,7 @@ DATA = {
         'nc,"Naumann, Christfried",,1,,"M P I",Tsammalex,http://example.org,',
     ],
     'taxa': [
-        'acaciaataxacantha,Acacia ataxacantha,,Flamethorn,Plantae,Fabales,'
+        'acaciaataxacantha,Acacia ataxacantha,,,Flamethorn,Plantae,,,Fabales,'
         'Fabaceae,Acacia,,,BW;ZA,,,ref1;ref2[20],',
     ],
     'lineages': [

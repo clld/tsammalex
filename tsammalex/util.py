@@ -49,12 +49,12 @@ def tr_attr(ctx, name, label=None, content=None, attr=None):
 
 def format_classification(taxon, with_species=False, with_rank=False):
     names = OrderedDict()
-    for r in 'kingdom order family genus'.split():
-        names[r] = getattr(taxon, r)
+    for r in 'kingdom phylum class_ order family genus'.split():
+        names[r.replace('_', '')] = getattr(taxon, r)
     if with_species:
         names[taxon.rank] = taxon.name
     return HTML.ul(
-        *[HTML.li(('{0} {1}: {2}' if with_rank else '{0} {2}').format('-' * i, *n))
+        *[HTML.li(('{0} {1}: {2}' if with_rank else '{0}{2}').format('-' * i, *n))
           for i, n in enumerate(n for n in names.items() if n[1])],
         class_="unstyled")
 

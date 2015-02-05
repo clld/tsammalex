@@ -1,7 +1,7 @@
 <%inherit file="../${context.get('request').registry.settings.get('clld.app_template', 'app.mako')}"/>
 <%namespace name="util" file="../util.mako"/>
 <%! active_menu_item = "parameters" %>
-<%block name="title">${ctx.name} (${ctx.english_name})</%block>
+<%block name="title">${ctx.name}${' (' + ctx.english_name + ')' if ctx.english_name else ''}</%block>
 
 <% dt = request.get_datatable('values', h.models.Value, parameter=ctx) %>
 <div style="float: right; margin-top: 10px;">
@@ -11,7 +11,9 @@
 <h2>
     <span>${ctx.rank.capitalize()}</span>
     <span style="font-style: italic">${ctx.name}</span>
-    <span style="font-size: smaller">(${ctx.english_name})</span>
+    % if ctx.english_name:
+        <span style="font-size: smaller">(${ctx.english_name})</span>
+    % endif
 </h2>
 
 <div class="row-fluid">

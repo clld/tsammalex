@@ -17,11 +17,13 @@ def data_files(data_file, name):
     return files
 
 
-def from_csv(data_file, model, data, name=None, visitor=None):
+def from_csv(data_file, model, data, name=None, visitor=None, filter_=None):
+    if filter_ is None:
+        filter_ = lambda r: True
     kw = {'delimiter': ',', 'lineterminator': str('\r\n'), 'quotechar': '"'}
     for fname in data_files(data_file, (name or model.__csv_name__) + '.csv'):
         for row in list(reader(fname, **kw))[1:]:
-            if row:
+            if row and filter_(row):
                 try:
                     obj = model.from_csv(row, data)
                 except (KeyError, IndexError):
@@ -36,20 +38,19 @@ def from_csv(data_file, model, data, name=None, visitor=None):
 
 
 def update_taxon_data(taxon, d, data):
-    for attr in [
-        'eol_id',
-        'gbif_id',
-        'catalogueoflife_url',
-        'wikipedia_url',
-        'kingdom',
-        'order',
-        'genus',
-        'family'
-    ]:
+    for attr in ['eol_id', 'gbif_id', 'catalogueoflife_url', 'wikipedia_url']:
         setattr(taxon, attr, d.get(attr))
+
+    if d.get('english_name'):
+        taxon.english_name = d['english_name']
 
     if d.get('taxonRank'):
         taxon.rank = d['taxonRank'].lower()
+
+    too_low = False
+    for rank in 'kingdom phylum class order family genus'.split():
+        too_low = too_low or rank == taxon.rank
+        setattr(taxon, rank, None if too_low else d.get(rank))
 
     for attr, model in dict(ecoregions='Ecoregion', countries='Country').items():
         collection = getattr(taxon, attr)
