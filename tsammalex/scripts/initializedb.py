@@ -115,7 +115,6 @@ def main(args):
                 continue
 
             jsondata = dict(
-                tags=image.tags,
                 url=image.source_url,
                 thumbnail=image_url(image.source_url, 'thumbnail'),
                 web=image_url(image.source_url, 'web'))

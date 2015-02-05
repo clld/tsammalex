@@ -11,8 +11,11 @@
 <h2>
     <span>${ctx.rank.capitalize()}</span>
     <span style="font-style: italic">${ctx.name}</span>
+    % if ctx.description:
+    <span style="color: #999;">${ctx.description}</span>
+    % endif
     % if ctx.english_name:
-        <span style="font-size: smaller">(${ctx.english_name})</span>
+        <span style="font-size: smaller">(${ctx.english_name.capitalize()})</span>
     % endif
 </h2>
 
@@ -31,6 +34,18 @@
             <td>Biological classification:</td>
             <td>${u.format_classification(ctx, with_species=True, with_rank=True)|n}</td>
         </tr>
+        % if ctx.synonyms:
+            <tr>
+                <td>Synonyms:</td>
+                <td>
+                    <ul class="unstyled">
+                        % for syn in u.split_ids(ctx.synonyms):
+                        <li>${syn}</li>
+                        % endfor
+                    </ul>
+                </td>
+            </tr>
+        % endif
         ${u.tr_attr(ctx, 'characteristics')}
         ${u.tr_rel(ctx, 'countries', dt='id', dd='name')}
         ${u.tr_rel(ctx, 'ecoregions', dt='id', dd='name')}

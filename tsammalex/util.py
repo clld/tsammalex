@@ -2,12 +2,55 @@ from __future__ import unicode_literals, print_function, absolute_import, divisi
 from collections import OrderedDict
 
 from purl import URL
+from sqlalchemy.orm import joinedload, contains_eager
 
 from clld.web.util.multiselect import MultiSelect
 from clld.db.meta import DBSession
-from clld.db.models.common import Language, Unit
+from clld.db.models.common import Language, Unit, Value, ValueSet
 from clld.web.util.htmllib import HTML
 from clld.web.util.helpers import maybe_external_link, collapsed
+
+from tsammalex.models import split_ids
+assert split_ids
+
+
+def license_name(license_url):
+    if license_url == "http://commons.wikimedia.org/wiki/GNU_Free_Documentation_License":
+        return 'GNU Free Documentation License'
+    if license_url == 'http://en.wikipedia.org/wiki/Public_domain':
+        license_url = 'http://creativecommons.org/publicdomain/zero/1.0/'
+    license_url_ = URL(license_url)
+    if license_url_.host() != 'creativecommons.org':
+        return license_url
+
+    comps = license_url_.path().split('/')
+    if len(comps) < 3:
+        return license_url
+
+    return {
+        'zero': 'Public Domain',
+    }.get(comps[2], '(CC) %s' % comps[2].upper())
+
+
+def names_in_2nd_languages(vs):
+    def format_name(n):
+        res = [HTML.i(n.name)]
+        if n.ipa:
+            res.append('&nbsp;[%s]' % n.ipa)
+        return HTML.span(*res)
+
+    def format_language(vs):
+        return ' '.join([vs.language.name, ', '.join(format_name(n) for n in vs.values)])
+
+    query = DBSession.query(ValueSet).join(ValueSet.language)\
+        .order_by(Language.name)\
+        .filter(Language.pk.in_([l.pk for l in vs.language.second_languages]))\
+        .filter(ValueSet.parameter_pk == vs.parameter_pk)\
+        .options(contains_eager(ValueSet.language), joinedload(ValueSet.values))
+    res = '; '.join(format_language(vs) for vs in query)
+    if res:
+        res = '(%s)' % res
+    return res
 
 
 def source_link(source):
@@ -49,7 +92,7 @@ def tr_attr(ctx, name, label=None, content=None, attr=None):
 
 def format_classification(taxon, with_species=False, with_rank=False):
     names = OrderedDict()
-    for r in 'kingdom phylum class_ order family genus'.split():
+    for r in 'kingdom phylum class_ order family'.split():
         names[r.replace('_', '')] = getattr(taxon, r)
     if with_species:
         names[taxon.rank] = taxon.name
@@ -80,8 +123,8 @@ def parameter_index_html(context=None, request=None, **kw):
 
 
 def language_detail_html(context=None, request=None, **kw):
-    return dict(categories=DBSession.query(Unit)
-                .filter(Unit.language == context).order_by(Unit.name))
+    return dict(categories=list(DBSession.query(Unit)
+                .filter(Unit.language == context).order_by(Unit.name)))
 
 
 def language_index_html(context=None, request=None, **kw):

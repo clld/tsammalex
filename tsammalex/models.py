@@ -425,7 +425,7 @@ class Taxon(CustomModelMixin, Parameter):
             joinedload(Taxon.references),
         )
 
-    def image_url(self, type, tag=None, index=None):
+    def image(self, tag=None, index=None):
         """Return the URL for the first image of a certain type.
 
         There are two ways to select specific images:
@@ -437,9 +437,16 @@ class Taxon(CustomModelMixin, Parameter):
         """
         for i, f in enumerate(sorted(self._files, key=lambda f: f.id)):
             if index == i:
-                return f.jsondatadict.get(type)
-            if tag is None or tag in f.jsondata['tags']:
-                return f.jsondatadict.get(type)
+                return f
+            if tag and tag in f.name:
+                return f
+            if tag is None and index is None:
+                return f
+
+    def image_url(self, type, tag=None, index=None):
+        img = self.image(tag=tag, index=index)
+        if img:
+            return img.jsondatadict.get(type)
 
     @property
     def link_specs(self):

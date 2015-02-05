@@ -38,7 +38,9 @@ def from_csv(data_file, model, data, name=None, visitor=None, filter_=None):
 
 
 def update_taxon_data(taxon, d, data):
-    for attr in ['eol_id', 'gbif_id', 'catalogueoflife_url', 'wikipedia_url']:
+    for attr in [
+        'eol_id', 'gbif_id', 'catalogueoflife_url', 'wikipedia_url', 'description'
+    ]:
         setattr(taxon, attr, d.get(attr))
 
     if d.get('english_name'):

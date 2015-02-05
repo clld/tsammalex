@@ -1,17 +1,167 @@
-from itertools import chain
+from itertools import chain, groupby
+import os
+from datetime import date
 
+from sqlalchemy.orm import joinedload, contains_eager
 from six import BytesIO
 from six.moves.urllib.request import urlopen
 from docx import Document
 from docx.shared import Inches
+try:
+    from xhtml2pdf import pisa
+except ImportError:
+    class pisa(object):
+        @staticmethod
+        def CreatePDF(*args, **kw):
+            print("ERROR: xhtml2pdf is not installed!")
+from path import path
 
+from clld.web.util.helpers import text_citation
+from clld.web.adapters import get_adapter
 from clld.web.adapters.geojson import (
     GeoJsonParameterMultipleValueSets, GeoJson, GeoJsonLanguages,
 )
 from clld.web.adapters.base import Representation
-from clld.interfaces import IParameter, ILanguage, IIndex
+from clld.web.adapters.download import Download
+from clld.interfaces import ILanguage, IIndex, IRepresentation, IParameter
+from clld.db.meta import DBSession
+from clld.db.models.common import Parameter, Language, ValueSet
 
+import tsammalex
 from tsammalex.interfaces import IEcoregion
+from tsammalex.models import Taxon
+
+
+css_tmpl = """
+    @font-face {{
+        font-family: 'charissil';
+        src: url('{0}/CharisSIL-R.ttf');
+    }}
+    @font-face {{
+        font-family: 'charissil';
+        font-style: italic;
+        src: url('{0}/CharisSIL-I.ttf');
+    }}
+    @font-face {{
+        font-family: 'charissil';
+        font-weight: bold;
+        src: url('{0}/CharisSIL-B.ttf');
+    }}
+    @font-face {{
+        font-family: 'charissil';
+        font-weight: bold;
+        font-style: italic;
+        src: url('{0}/CharisSIL-BI.ttf');
+    }}
+
+    html,body {{
+        font-family: 'charissil'; font-size: 3.5mm;
+    }}
+    @page title_template {{ margin-top: 5cm; }}
+    @page regular_template {{
+        size: a4 portrait;
+        @frame header_frame {{           /* Static Frame */
+            -pdf-frame-content: header_content;
+            left: 40pt; width: 532pt; top: 40pt; height: 30pt;
+        }}
+        @frame content_frame {{          /* Content Frame */
+            left: 40pt; width: 532pt; top: 80pt; height: 652pt;
+        }}
+        @frame footer_frame {{           /* Another static Frame */
+            -pdf-frame-content: footer_content;
+            left: 40pt; width: 532pt; top: 782pt; height: 20pt;
+        }}
+    }}
+    div.title {{ margin-bottom: 5cm; }}
+    h1 {{ font-size: 30mm; text-align: center; }}
+    h2 {{ -pdf-keep-with-next: true; padding-bottom: -2mm; }}
+    h3 {{ -pdf-keep-with-next: true; padding-bottom: -2mm; }}
+    p {{ -pdf-keep-with-next: true; }}
+    p.separator {{ -pdf-keep-with-next: false; font-size: 1mm; }}
+    img.image {{ zoom: 55%; }}
+    td {{ text-align: center; }}
+"""
+
+html_tmpl = """
+<html><head><style>%s</style></head><body>
+    <div id="header_content" style="text-align: center;">%s</div>
+
+    <div id="footer_content" style="text-align: center;">
+        <pdf:pagenumber> of <pdf:pagecount>
+    </div>
+    <pdf:nexttemplate name="title_template" />
+    <p>&nbsp;<p>
+    <p>&nbsp;<p>
+    <p>&nbsp;<p>
+    <p>&nbsp;<p>
+    <div class="title">
+    %s
+    </div>
+    <pdf:nexttemplate name="regular_template" />
+    <pdf:nextpage />
+    %s
+    </body></html>
+"""
+
+
+class Pdf(Download):
+    ext = 'pdf'
+    description = "printable PDF file"
+
+    def asset_spec(self, req):
+        return '.'.join(Download.asset_spec(self, req).split('.')[:-1])
+
+    def create(self, req, filename=None, verbose=True, link_callback=None, lang=None):
+        html = []
+        lang = lang or Language.get('afr')
+        entries = list(
+            DBSession.query(ValueSet).join(ValueSet.parameter)
+            .filter(ValueSet.language_pk == lang.pk)
+            .order_by(Taxon.kingdom, Taxon.order, Taxon.family, Parameter.name)
+            .options(contains_eager(ValueSet.parameter), joinedload(ValueSet.values)))
+
+        for kingdom, taxa1 in groupby(entries, key=lambda vs: vs.parameter.kingdom):
+            html.append('<h2>%s</h2>' % (kingdom or 'other'))
+            for order, taxa2 in groupby(taxa1, key=lambda vs: vs.parameter.order):
+                html.append('<h3>%s</h3>' % (order or 'other'))
+                for family, taxa3 in groupby(taxa2, key=lambda vs: vs.parameter.family):
+                    html.append('<h4>%s</h4>' % (family or 'other'))
+                    for entry in taxa3:
+                        adapter = get_adapter(
+                            IRepresentation, entry, req, ext='snippet.html')
+                        html.append(adapter.render(entry, req))
+                        html.append('<p class="separator">&nbsp;<p>')
+
+        static_path = lambda *comps: os.path.abspath(
+            os.path.join(os.path.dirname(tsammalex.__file__), 'static', *comps))
+        ttf = (
+            os.path.join(os.path.dirname(tsammalex.__file__), 'static', 'charissil'))
+        with open(static_path('download', '%s.pdf' % lang.id), 'wb') as fp:
+            pisa.CreatePDF(
+                html_tmpl % (
+                    css_tmpl.format(static_path('charissil')),
+                    req.resource_url(req.dataset),
+                    """
+<h1 style="text-align: center; font-size: 12mm;">%(language)s names for Plants and Animals</h1>
+<p style="font-size: 5mm;">
+This document was created from %(dataset)s (%(url)s)
+on %(date)s.
+</p>
+<p style="font-size: 5mm;">
+%(dataset)s is published under a %(license)s and should be cited as
+</p>
+<blockquote style="font-size: 5mm;"><i>%(citation)s</i></blockquote>
+""" % dict(
+                    language=lang.name,
+                    dataset=req.dataset.name,
+                    url=req.resource_url(req.dataset),
+                    date=date.today(),
+                    citation=text_citation(req, req.dataset),
+                    license=req.dataset.jsondata['license_name']),
+                    ''.join(html)),
+                dest=fp,
+                link_callback=link_callback,
+            )
 
 
 class GeoJsonEcoregions(GeoJson):
@@ -43,6 +193,16 @@ class GeoJsonTaxa(GeoJsonParameterMultipleValueSets):
 class GeoJsonLanguoids(GeoJsonLanguages):
     def feature_properties(self, ctx, req, feature):
         return {'lineage': feature.lineage}
+
+
+class LanguagePdf(Representation):
+    mimetype = 'application/pdf'
+    extension = 'pdf'
+
+    def render(self, ctx, req):
+        fname = path(tsammalex.__file__).dirname().joinpath('static', 'download', '%s.pdf' % ctx.id)
+        if fname.exists():
+            return fname.bytes()
 
 
 class Docx(Representation):
@@ -134,6 +294,7 @@ class TaxonDocx(Docx):
 
 
 def includeme(config):
+    config.register_adapter(LanguagePdf, ILanguage)
     config.register_adapter(LanguageDocx, ILanguage)
     config.register_adapter(TaxonDocx, IParameter)
     config.register_adapter(GeoJsonEcoregions, IEcoregion, IIndex)

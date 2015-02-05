@@ -148,7 +148,8 @@ class CommonNameCol(Col):
 class ClassificationCol(Col):
     def __init__(self, *args, **kw):
         choices = set()
-        for row in DBSession.query(Taxon.order, Taxon.family, Taxon.genus):
+        self.rank_cols = [Taxon.kingdom, Taxon.phylum, Taxon.class_, Taxon.family]
+        for row in DBSession.query(*self.rank_cols):
             for name in row:
                 if name:
                     choices.add(name)
@@ -159,10 +160,10 @@ class ClassificationCol(Col):
         return format_classification(item)
 
     def search(self, qs):
-        return or_(Taxon.order == qs, Taxon.family == qs, Taxon.genus == qs)
+        return or_(*[col == qs for col in self.rank_cols])
 
     def order(self):
-        return [Taxon.order, Taxon.family, Taxon.genus]
+        return self.rank_cols
 
 
 class TaxaTable(Parameters):
@@ -492,6 +493,9 @@ class Ecoregions(DataTable):
 
 
 class MD5Col(LinkCol):
+    def get_attrs(self, item):
+        return {'label': item.id}
+
     def format(self, item):
         return HTML.span(LinkCol.format(self, item), style="font-family: monospace;")
 
