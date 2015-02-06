@@ -13,14 +13,17 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, backref, joinedload_all, joinedload
 from sqlalchemy.ext.declarative import declared_attr
+from nameparser import HumanName
 
 from clld import interfaces
 from clld.util import slug
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
-    Unit, HasSourceMixin, Contributor, Parameter_files,
+    Unit, HasSourceMixin, Contributor, Parameter_files, Dataset,
 )
+from clld.web.util.htmllib import HTML
+from clld.web.util.helpers import linked_references
 
 from tsammalex.interfaces import IEcoregion
 
@@ -101,8 +104,15 @@ class TsammalexContributor(CustomModelMixin, Contributor):
     sections = Column(Unicode)
     research_project = Column(Unicode)
 
+    def last_first(self):
+        return '{0.first} {0.last}'.format(self.parsed_name)
+
     def csv_head(self):
         return 'id,name,editor_ord,editor_sections,sections,address,research_project,url,description'.split(',')
+
+    @property
+    def parsed_name(self):
+        return HumanName(self.name)
 
     @property
     def notes(self):
@@ -424,6 +434,15 @@ class Taxon(CustomModelMixin, Parameter):
             joinedload(Taxon.countries),
             joinedload(Taxon.references),
         )
+
+    def formatted_refs(self, req):
+        res = []
+        for ref in self.references:
+            text = HTML.a(ref.source.name, href=req.resource_url(ref.source))
+            if ref.description:
+                text = '%s: %s' % (text, ref.description)
+            res.append(text)
+        return '; '.join(res)
 
     def image(self, tag=None, index=None):
         """Return the URL for the first image of a certain type.

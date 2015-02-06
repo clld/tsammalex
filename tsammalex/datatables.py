@@ -23,7 +23,7 @@ from tsammalex.models import (
     Name, TsammalexContributor, TsammalexEditor,
     Languoid, NameReference, NameCategory, Use, NameUse, NameHabitat,
 )
-from tsammalex.util import format_classification, collapsed
+from tsammalex.util import format_classification, collapsed, split_ids
 
 
 class ContribNameCol(NameCol):
@@ -519,6 +519,14 @@ class LicenseCol(Col):
         return maybe_license_link(self.dt.req, item.get_data('permission') or '')
 
 
+class TagsCol(Col):
+    def format(self, item):
+        return HTML.ul(
+            *[HTML.li(HTML.span(t, class_="label label-info"))
+                      for t in split_ids(item.name)],
+            class_='unstyled')
+
+
 class Images(DataTable):
     def __init__(self, *args, **kw):
         DataTable.__init__(self, *args, **kw)
@@ -539,6 +547,7 @@ class Images(DataTable):
             LicenseCol(self, 'license', model_col=self.License.value),
             LinkCol(self, 'taxon', model_col=Parameter.name, get_object=lambda i: i.object),
             _ThumbnailCol(self, '#'),
+            TagsCol(self, 'tags', model_col=Parameter_files.name),
         ]
 
     def get_options(self):

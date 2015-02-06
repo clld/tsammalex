@@ -54,7 +54,7 @@ def main(args):
     data.add(common.Contribution, 'tsammalex', name="Tsammalex", id="tsammalex")
     glottolog = glottocodes_by_isocode('postgresql://robert@/glottolog3')
 
-    for rec in Database.from_file(data_file('sources.bib')):
+    for rec in Database.from_file(data_file('sources.bib'), lowercase=True):
         data.add(models.Bibrec, rec.id, _obj=bibtex2source(rec, cls=models.Bibrec))
 
     load_ecoregions(data_file, data)

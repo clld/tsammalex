@@ -1,5 +1,19 @@
+<%def name="td_image(image)">
+    % if image:
+        <% license = u.license_name(image.get_data('permission') or '') %>
+        <td width="33%"><br/>
+            <img class="image" src="${image.jsondatadict.get('web')}" />&nbsp;
+            <br/>
+                <span style="font-size: 2.5mm;">
+                    ${license}
+                    ${'&copy;' if license != 'Public Domain' else 'by'|n}
+                    ${image.get_data('creator') or ''}
+                </span>
+        </td>
+    % endif
+</%def>
 <p style="padding-bottom: -2mm;">
-<strong><i>${ctx.parameter.name}</i></strong>
+<strong><i><a href="${request.resource_url(ctx.parameter)}">${ctx.parameter.name}</a></i></strong>
 % if ctx.parameter.description:
 <span style="color: #666;">${ctx.parameter.description}</span>
 % endif
@@ -9,6 +23,9 @@ ${u.names_in_2nd_languages(ctx)|n}.
 % endif
 % if ctx.parameter.biotope:
     <span>Biotope: ${ctx.parameter.biotope}.</span>
+% endif
+% if ctx.parameter.references:
+    <span>(${ctx.parameter.formatted_refs(request)|n})</span>
 % endif
 </p>
 <ul style="padding-top: -1mm;">
@@ -73,37 +90,13 @@ ${name.ethnobiological_notes}.
 </ul>
 % if ctx.parameter._files:
     <table width="100%" style="padding-top: -2mm;"><tr>
-    % if 'thumbnail' in ctx.parameter._files[0].name:
+    % if 'thumbnail' in ''.join(f.name or '' for f in ctx.parameter._files):
         % for tag in ['thumbnail' + str(j + 1) for j in range(3)]:
-            <% image = ctx.parameter.image(tag=tag) %>
-            % if image:
-            <% license = u.license_name(image.get_data('permission') or '') %>
-            <td width="33%"><br/>
-            <img class="image" src="${image.jsondatadict.get('web')}" />&nbsp;
-            <br/>
-                <span style="font-size: 2.5mm;">
-                    ${license}
-                    ${'&copy;' if license != 'Public Domain' else 'by'|n}
-                    ${image.get_data('creator') or ''}
-                </span>
-            </td>
-            % endif
+            ${td_image(ctx.parameter.image(tag=tag))}
         % endfor
     % else:
         % for i in range(3):
-            <% image = ctx.parameter.image(index=i) %>
-            % if image_url:
-            <% license = u.license_name(image.get_data('permission') or '') %>
-            <td width="33%"><br/>
-            <img class="image" src="${image.jsondatadict.get('web')}" />&nbsp;
-            <br/>
-                <span style="font-size: 2.5mm;">
-                    ${license}
-                    ${'&copy;' if license != 'Public Domain' else 'by'|n}
-                    ${image.get_data('creator') or ''}
-                </span>
-            </td>
-            % endif
+            ${td_image(ctx.parameter.image(index=1))}
         % endfor
     % endif
     </tr></table>

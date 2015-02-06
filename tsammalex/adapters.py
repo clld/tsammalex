@@ -16,7 +16,7 @@ except ImportError:
             print("ERROR: xhtml2pdf is not installed!")
 from path import path
 
-from clld.web.util.helpers import text_citation
+from clld.web.util.helpers import text_citation, charis_font_spec_css
 from clld.web.adapters import get_adapter
 from clld.web.adapters.geojson import (
     GeoJsonParameterMultipleValueSets, GeoJson, GeoJsonLanguages,
@@ -32,27 +32,12 @@ from tsammalex.interfaces import IEcoregion
 from tsammalex.models import Taxon
 
 
+download_path = lambda basename: \
+    path(tsammalex.__file__).dirname().joinpath('static', 'download', basename)
+
+
 css_tmpl = """
-    @font-face {{
-        font-family: 'charissil';
-        src: url('{0}/CharisSIL-R.ttf');
-    }}
-    @font-face {{
-        font-family: 'charissil';
-        font-style: italic;
-        src: url('{0}/CharisSIL-I.ttf');
-    }}
-    @font-face {{
-        font-family: 'charissil';
-        font-weight: bold;
-        src: url('{0}/CharisSIL-B.ttf');
-    }}
-    @font-face {{
-        font-family: 'charissil';
-        font-weight: bold;
-        font-style: italic;
-        src: url('{0}/CharisSIL-BI.ttf');
-    }}
+    {0}
 
     html,body {{
         font-family: 'charissil'; font-size: 3.5mm;
@@ -121,36 +106,43 @@ class Pdf(Download):
             .options(contains_eager(ValueSet.parameter), joinedload(ValueSet.values)))
 
         for kingdom, taxa1 in groupby(entries, key=lambda vs: vs.parameter.kingdom):
-            html.append('<h2>%s</h2>' % (kingdom or 'other'))
-            for order, taxa2 in groupby(taxa1, key=lambda vs: vs.parameter.order):
-                html.append('<h3>%s</h3>' % (order or 'other'))
-                for family, taxa3 in groupby(taxa2, key=lambda vs: vs.parameter.family):
-                    html.append('<h4>%s</h4>' % (family or 'other'))
-                    for entry in taxa3:
-                        adapter = get_adapter(
-                            IRepresentation, entry, req, ext='snippet.html')
-                        html.append(adapter.render(entry, req))
-                        html.append('<p class="separator">&nbsp;<p>')
+            html.append('<h2>Kingdom: %s</h2>' % (kingdom or 'other'))
+            for phylum, taxa2 in groupby(taxa1, key=lambda vs: vs.parameter.phylum):
+                html.append('<h3>Phylum: %s</h3>' % (phylum or 'other'))
+                for class_, taxa3 in groupby(taxa2, key=lambda vs: vs.parameter.class_):
+                    html.append('<h4>Class: %s</h4>' % (class_ or 'other'))
+                    for order, taxa4 in groupby(taxa3, key=lambda vs: vs.parameter.order):
+                        html.append('<h5>Order: %s</h5>' % (order or 'other'))
+                        for family, taxa5 in groupby(taxa4, key=lambda vs: vs.parameter.family):
+                            html.append('<h6>Family: %s</h6>' % (family or 'other'))
+                            for entry in taxa5:
+                                adapter = get_adapter(
+                                    IRepresentation, entry, req, ext='snippet.html')
+                                html.append(adapter.render(entry, req))
+                                html.append('<p class="separator">&nbsp;<p>')
 
-        static_path = lambda *comps: os.path.abspath(
-            os.path.join(os.path.dirname(tsammalex.__file__), 'static', *comps))
-        ttf = (
-            os.path.join(os.path.dirname(tsammalex.__file__), 'static', 'charissil'))
-        with open(static_path('download', '%s.pdf' % lang.id), 'wb') as fp:
+        with open(download_path('%s.pdf' % lang.id), 'wb') as fp:
             pisa.CreatePDF(
                 html_tmpl % (
-                    css_tmpl.format(static_path('charissil')),
+                    css_tmpl.format(charis_font_spec_css()),
                     req.resource_url(req.dataset),
                     """
 <h1 style="text-align: center; font-size: 12mm;">%(language)s names for Plants and Animals</h1>
 <p style="font-size: 5mm;">
-This document was created from %(dataset)s (%(url)s)
-on %(date)s.
+This document was created from <a href="%(url)s">%(dataset)s</a> on %(date)s.
 </p>
 <p style="font-size: 5mm;">
 %(dataset)s is published under a %(license)s and should be cited as
 </p>
 <blockquote style="font-size: 5mm;"><i>%(citation)s</i></blockquote>
+<p style="font-size: 5mm;">
+A full list of contributors is available at
+<a href="%(url)scontributors">%(url)scontributors</a>
+</p>
+<p style="font-size: 5mm;">
+The list of references cited in this document is available at
+<a href="%(url)ssources">%(url)ssources</a>
+</p>
 """ % dict(
                     language=lang.name,
                     dataset=req.dataset.name,
@@ -200,7 +192,7 @@ class LanguagePdf(Representation):
     extension = 'pdf'
 
     def render(self, ctx, req):
-        fname = path(tsammalex.__file__).dirname().joinpath('static', 'download', '%s.pdf' % ctx.id)
+        fname = download_path('%s.pdf' % ctx.id)
         if fname.exists():
             return fname.bytes()
 
@@ -295,7 +287,7 @@ class TaxonDocx(Docx):
 
 def includeme(config):
     config.register_adapter(LanguagePdf, ILanguage)
-    config.register_adapter(LanguageDocx, ILanguage)
+    #config.register_adapter(LanguageDocx, ILanguage)
     config.register_adapter(TaxonDocx, IParameter)
     config.register_adapter(GeoJsonEcoregions, IEcoregion, IIndex)
     config.register_adapter(GeoJsonTaxa, IParameter)

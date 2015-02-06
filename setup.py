@@ -1,10 +1,11 @@
 from setuptools import setup, find_packages
 
 requires = [
-    'clld>=0.31.3',
+    'clld>=0.31.5',
     'clldmpg',
     'python-docx',
     'pycountry',
+    'nameparser',
 ]
 
 tests_require = [

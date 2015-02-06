@@ -33,7 +33,6 @@ class Tests(TestWithApp):
         self.app.get_dt('/languages')
         self.app.get_html('/languages')
         self.app.get_html('/languages/huc')
-        self.app.get('/languages/huc.docx')
         self.app.get_json('/languages.geojson')
 
     def test_name(self):
