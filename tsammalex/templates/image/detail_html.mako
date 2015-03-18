@@ -8,8 +8,8 @@
 <div class="row-fluid" id="images">
     <div class="span6">
         <div class="well" style="text-align: center;">
-            <a href="${ctx.jsondatadict.get('url')}" title="view image">
-                <img src="${ctx.jsondatadict.get('web')}" class="image"/>
+            <a href="${ctx.jsondata.get('url')}" title="view image">
+                <img src="${ctx.jsondata.get('web')}" class="image"/>
             </a>
         </div>
     </div>

@@ -162,7 +162,7 @@ class GeoJsonEcoregions(GeoJson):
 
     def get_features(self, ctx, req):
         for ecoregion in ctx.get_query():
-            for polygon in ecoregion.jsondatadict['polygons']:
+            for polygon in ecoregion.jsondata['polygons']:
                 yield {
                     'type': 'Feature',
                     'properties': {

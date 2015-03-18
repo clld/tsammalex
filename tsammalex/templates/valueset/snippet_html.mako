@@ -2,7 +2,7 @@
     % if image:
         <% license = u.license_name(image.get_data('permission') or '') %>
         <td width="33%"><br/>
-            <img class="image" src="${image.jsondatadict.get('web')}" />&nbsp;
+            <img class="image" src="${image.jsondata.get('web')}" />&nbsp;
             <br/>
                 <span style="font-size: 2.5mm;">
                     ${license}

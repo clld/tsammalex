@@ -465,7 +465,7 @@ class Taxon(CustomModelMixin, Parameter):
     def image_url(self, type, tag=None, index=None):
         img = self.image(tag=tag, index=index)
         if img:
-            return img.jsondatadict.get(type)
+            return img.jsondata.get(type)
 
     @property
     def link_specs(self):

@@ -54,7 +54,7 @@ Africa).
 </p>
 <p>
     The content of this web site including the downloadable database, is published under a
-    ${request.dataset.jsondatadict['license_name']} (unless stated otherwise).
+    ${request.dataset.jsondata['license_name']} (unless stated otherwise).
 </p>
 <p>
     Contributions and comments are highly appreciated! Read more information under "Contribute!".
