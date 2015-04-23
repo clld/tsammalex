@@ -22,8 +22,6 @@ def cached_path(args, url, rel):
 
 def main(args):
     for lang in DBSession.query(Language):
-        if lang.id != 'knw':
-            continue
         print(lang.name)
         Pdf(None, 'tsammalex').create(
             args.env['request'], filename='test.pdf', link_callback=partial(cached_path, args), lang=lang)
