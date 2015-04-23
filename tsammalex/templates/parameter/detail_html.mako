@@ -94,6 +94,8 @@
                                         ${h.maybe_license_link(request, value, button='small')}
                                     % elif attr == 'source':
                                         ${u.source_link(value)}
+                                    % elif attr == 'comments':
+                                        ${value|n}
                                     % else:
                                         ${value}
                                     % endif
