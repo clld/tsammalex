@@ -102,7 +102,13 @@ class Pdf(Download):
         entries = list(
             DBSession.query(ValueSet).join(ValueSet.parameter)
             .filter(ValueSet.language_pk == lang.pk)
-            .order_by(Taxon.kingdom, Taxon.order, Taxon.family, Parameter.name)
+            .order_by(
+                Taxon.kingdom,
+                Taxon.phylum,
+                Taxon.class_,
+                Taxon.order,
+                Taxon.family,
+                Parameter.name)
             .options(contains_eager(ValueSet.parameter), joinedload(ValueSet.values)))
 
         for kingdom, taxa1 in groupby(entries, key=lambda vs: vs.parameter.kingdom):
@@ -179,6 +185,7 @@ class GeoJsonEcoregions(GeoJson):
 class GeoJsonTaxa(GeoJsonParameterMultipleValueSets):
     def feature_properties(self, ctx, req, p):
         return {
+            'lineage': p[0].lineage,
             'label': ', '.join(v.name for v in chain(*[vs.values for vs in p[1]]))}
 
 
