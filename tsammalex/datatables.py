@@ -255,7 +255,7 @@ class RelationsCol(Col):
 
     def format(self, item):
         return HTML.ul(
-            *[HTML.li(o.name) for o in getattr(item, self.__rel_name__)],
+            *[HTML.li(o.name + ',') for o in getattr(item, self.__rel_name__)],
             class_="unstyled")
 
     def search(self, qs):
