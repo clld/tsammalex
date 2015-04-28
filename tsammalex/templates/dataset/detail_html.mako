@@ -13,7 +13,7 @@
         of data curated at
         ${h.external_link('https://github.com/clld/tsammalex-data', label='clld/tsammalex-data')} -
         currently the
-        ${h.external_link('https://github.com/clld/tsammalex-data/releases', label='"public beta" v0.1')}
+        ${h.external_link('https://github.com/clld/tsammalex-data/releases/tag/v0.1', label='"public beta" v0.1')}
         <br />
         <a href="http://dx.doi.org/10.5281/zenodo.17201"><img src="https://zenodo.org/badge/5142/clld/tsammalex-data.svg"><a>
     </%util:well>
