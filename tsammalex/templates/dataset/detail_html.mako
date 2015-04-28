@@ -6,6 +6,17 @@
         ${h.newline2br(h.text_citation(request, ctx))|n}
         ${h.cite_button(request, ctx)}
     </%util:well>
+    <%util:well title="Version">
+        <a href="${req.resource_url(req.dataset)}" style="font-family: monospace">tsammalex.clld.org</a>
+        serves the latest
+        ${h.external_link('https://github.com/clld/tsammalex-data/releases', label='released version')}
+        of data curated at
+        ${h.external_link('https://github.com/clld/tsammalex-data', label='clld/tsammalex-data')} -
+        currently the
+        ${h.external_link('https://github.com/clld/tsammalex-data/releases', label='"public beta" v0.1')}
+        <br />
+        <a href="http://dx.doi.org/10.5281/zenodo.17201"><img src="https://zenodo.org/badge/5142/clld/tsammalex-data.svg"><a>
+    </%util:well>
 </%def>
 
 <h2>Welcome to Tsammalex</h2>
