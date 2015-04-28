@@ -51,6 +51,15 @@ class LanguoidMap(Map):
         for legend in super(LanguoidMap, self).get_legends():
             yield legend
 
+    def get_layers(self):
+        #yield Layer(
+        #    'ecoregions',
+        #    'WWF Eco Regions',
+        #    self.req.route_url('ecoregions_alt', ext='geojson'))
+
+        for layer in Map.get_layers(self):
+            yield layer
+
 
 class EcoregionsMap(Map):
     def get_options(self):
