@@ -7,7 +7,7 @@
         <p>
             <a href="http://dx.doi.org/10.5281/zenodo.17201">
                 <img src="https://zenodo.org/badge/5142/clld/tsammalex-data.svg" />
-                <a>
+            </a>
         </p>
         ${h.cite_button(request, ctx)}
     </%util:well>
