@@ -5,8 +5,8 @@
     <%util:well title="Cite">
         ${h.newline2br(h.text_citation(request, ctx))|n}
         <p>
-            <a href="http://dx.doi.org/10.5281/zenodo.17201">
-                <img src="https://zenodo.org/badge/5142/clld/tsammalex-data.svg" />
+            <a href="http://dx.doi.org/10.5281/zenodo.17497">
+                <img src="https://zenodo.org/badge/doi/10.5281/zenodo.17497.svg" alt="10.5281/zenodo.17497">
             </a>
         </p>
         ${h.cite_button(request, ctx)}
