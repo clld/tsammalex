@@ -25,7 +25,7 @@ _('Values')
 
 
 class TsammalexMapMarker(MapMarker):
-    def get_icon(self, ctx, req):
+    def get_color(self, ctx, req):
         lineage = None
         if ctx and isinstance(ctx, (tuple, list)):
             ctx = ctx[0]
@@ -37,8 +37,10 @@ class TsammalexMapMarker(MapMarker):
             lineage = req.db.query(models.Lineage)\
                 .filter(models.Lineage.name == ctx).one()
 
-        if lineage:
-            return 'c' + lineage.color
+        return lineage.color if lineage else 'ff6600'
+
+    def __call__(self, ctx, req):
+        return req.static_url('tsammalex:static/icons/c%s.png' % self.get_color(ctx, req))
 
 
 def main(global_config, **settings):
