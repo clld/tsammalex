@@ -17,8 +17,8 @@
         ${h.external_link('https://github.com/clld/tsammalex-data/releases', label='released version')}
         of data curated at
         ${h.external_link('https://github.com/clld/tsammalex-data', label='clld/tsammalex-data')} -
-        currently the
-        ${h.external_link('https://github.com/clld/tsammalex-data/releases/tag/v0.1', label='"public beta" v0.1')}
+        currently
+        ${h.external_link('https://github.com/clld/tsammalex-data/releases/tag/v0.2', label='v0.2')}
     </%util:well>
 </%def>
 
