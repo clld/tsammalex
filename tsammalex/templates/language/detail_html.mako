@@ -6,6 +6,14 @@
 ${util.codes()}
 
 <h2>${_('Language')} ${ctx.name}</h2>
+<p>
+% if ctx.contribution.contributor_assocs:
+    edited by ${h.linked_contributors(request, ctx.contribution)}
+    ${h.cite_button(request, ctx.contribution)}
+% else:
+    ${h.cite_button(request, request.dataset)}
+% endif
+</p>
 <div style="float: right;">
 ${h.alt_representations(request, ctx, doc_position='left', exclude=['md.html'])}
 </div>

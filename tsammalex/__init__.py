@@ -40,7 +40,7 @@ class TsammalexMapMarker(MapMarker):
         return lineage.color if lineage else 'ff6600'
 
     def __call__(self, ctx, req):
-        return req.static_url('tsammalex:static/icons/c%s.png' % self.get_color(ctx, req))
+        return req.static_url('tsammalex:static/icons/%s.png' % self.get_color(ctx, req))
 
 
 def main(global_config, **settings):

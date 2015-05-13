@@ -20,7 +20,8 @@ from clld.util import slug
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
-    Unit, HasSourceMixin, Contributor, Parameter_files, Dataset,
+    Unit, HasSourceMixin, Contributor, Parameter_files, Contribution,
+    ContributionContributor,
 )
 from clld.web.util.htmllib import HTML
 from clld.web.util.helpers import linked_references
@@ -108,7 +109,7 @@ class TsammalexContributor(CustomModelMixin, Contributor):
         return '{0.first} {0.last}'.format(self.parsed_name)
 
     def csv_head(self):
-        return 'id,name,editor_ord,editor_sections,sections,address,research_project,url,description'.split(',')
+        return 'id,name,sections,editor_ord,editor_sections,address,research_project,url,description'.split(',')
 
     @property
     def parsed_name(self):
@@ -162,6 +163,8 @@ class Languoid(CustomModelMixin, Language):
     lineage = relationship(Lineage, backref='languoids')
     glottocode = Column(String)
     region = Column(Unicode)
+    contribution_pk = Column(Integer, ForeignKey('contribution.pk'))
+    contribution = relationship(Contribution, backref=backref('language', uselist=False))
 
     @declared_attr
     def second_languages(cls):
@@ -177,6 +180,7 @@ class Languoid(CustomModelMixin, Language):
             'id',
             'name',
             'glottocode',
+            'contributors__ids',
             'description',
             'lineages__id',
             'latitude',
@@ -188,7 +192,13 @@ class Languoid(CustomModelMixin, Language):
     @classmethod
     def from_csv(cls, row, data=None):
         obj = super(Languoid, cls).from_csv(row)
-        obj.lineage = data['Lineage'][row[4]]
+        obj.lineage = data['Lineage'][row[5]]
+        obj.contribution = Contribution(id=obj.id, name=obj.name)
+        for i, cid in enumerate(split_ids(row[3])):
+            ContributionContributor(
+                contribution=obj.contribution,
+                contributor=data['TsammalexContributor'][cid],
+                ord=i)
         return obj
 
 

@@ -128,12 +128,17 @@ class Pdf(Download):
                                 html.append('<p class="separator">&nbsp;<p>')
 
         with open(download_path('%s.pdf' % lang.id), 'wb') as fp:
+            editors = ''
+            if lang.contribution.contributor_assocs:
+                editors = 'edited by ' + ' and '.join(
+                    c.last_first() for c in lang.contribution.primary_contributors)
             pisa.CreatePDF(
                 html_tmpl % (
                     css_tmpl.format(charis_font_spec_css()),
                     req.resource_url(req.dataset),
                     """
 <h1 style="text-align: center; font-size: 12mm;">%(language)s names for Plants and Animals</h1>
+<h2 style="text-align: center; font-size: 8mm;">%(editors)s</h2>
 <p style="font-size: 5mm;">
 This document was created from <a href="%(url)s">%(dataset)s</a> on %(date)s.
 </p>
@@ -151,6 +156,7 @@ The list of references cited in this document is available at
 </p>
 """ % dict(
                     language=lang.name,
+                    editors=editors,
                     dataset=req.dataset.name,
                     url=req.resource_url(req.dataset),
                     date=date.today(),

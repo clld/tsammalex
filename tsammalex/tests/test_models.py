@@ -17,7 +17,7 @@ DATA = {
         'germanic,Germanic,,germ1287,,,dd0000',
     ],
     'languages': [
-        'afr,English,stan1293,"English is a ...",germanic,,,Northern Europe,'
+        'afr,English,stan1293,,"English is a ...",germanic,,,Northern Europe,'
     ],
     'categories': [
         'afr-bome,bome,trees,afr,',

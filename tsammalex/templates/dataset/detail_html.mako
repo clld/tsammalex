@@ -5,8 +5,8 @@
     <%util:well title="Cite">
         ${h.newline2br(h.text_citation(request, ctx))|n}
         <p>
-            <a href="http://dx.doi.org/10.5281/zenodo.17497">
-                <img src="https://zenodo.org/badge/doi/10.5281/zenodo.17497.svg" alt="10.5281/zenodo.17497">
+            <a href="http://dx.doi.org/10.5281/zenodo.17571">
+                <img src="https://zenodo.org/badge/doi/10.5281/zenodo.17571.svg" alt="10.5281/zenodo.17571">
             </a>
         </p>
         ${h.cite_button(request, ctx)}
@@ -18,7 +18,7 @@
         of data curated at
         ${h.external_link('https://github.com/clld/tsammalex-data', label='clld/tsammalex-data')} -
         currently
-        ${h.external_link('https://github.com/clld/tsammalex-data/releases/tag/v0.2', label='v0.2')}
+        ${h.external_link('https://github.com/clld/tsammalex-data/releases/tag/v0.3', label='v0.3')}
     </%util:well>
 </%def>
 
@@ -54,7 +54,9 @@ Africa).
     and compiled by Christfried Naumann, Lena Sell, Noémie Jaulgey
     and Kathrin Heiden. Significant amounts of data were added by
     ${h.external_link('http://dogonlanguages.org', label='Jeffrey Heath and colleagues (Dogon Languages Project)')}
-    and added by Steven Moran and Robert Forkel.
+    and edited by Steven Moran and Robert Forkel.
+    Another bulk of data has been imported from the Reference Lexicon of the languages of Africa
+    (${h.external_link('http://reflex.cnrs.fr/database/', label='RefLex')}) by  Guillaume Segerer and S. Flavier.
     Peter Fröhlich, Hans-Jörg Bibiko, Jan Klom and Stefan Koch were involved in
     former versions of the database.
 </p>

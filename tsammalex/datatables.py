@@ -429,6 +429,14 @@ class Names(Values):
             return {'bPaginate': False}
 
 
+class EditorsCol(Col):
+    __kw__ = dict(bSearchable=False, bSortable=False)
+
+    def format(self, item):
+        return ' and '.join(
+            c.last_first() for c in item.contribution.primary_contributors)
+
+
 class Languoids(Languages):
     def base_query(self, query):
         return query.join(Languoid.lineage)
@@ -442,6 +450,7 @@ class Languoids(Languages):
                 format=lambda i: '' if not i.glottocode
                 else external_link(glottolog_url(i.glottocode), i.glottocode)),
             LineageCol(self, 'lineage'),
+            EditorsCol(self, 'editors'),
         ] + res[2:]
 
 
