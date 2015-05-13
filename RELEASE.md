@@ -9,4 +9,5 @@ csvcut tsammalex-data/tsammalexdata/data/lineages.csv -c color
 4. Run the test suite.
 5. Adapt version info on the app landing page.
 6. [Create a release](https://help.github.com/articles/creating-releases/) of `clld/tsammalex`.
-7. Update database and application on the server.
+7. Create PDF downloads locally.
+8. Update database, application and downloads on the server.
