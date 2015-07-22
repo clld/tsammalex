@@ -2,9 +2,10 @@ from __future__ import unicode_literals, absolute_import, division, print_functi
 
 from six import string_types
 from zope.interface import classImplements
+from pyramid.config import Configurator
 
-from clld.interfaces import ILanguage, IMapMarker
-from clld.web.app import get_configurator, MapMarker
+from clld.interfaces import ILanguage, IMapMarker, IValueSet, IValue
+from clld.web.app import MapMarker
 from clld.db.models.common import Parameter_files
 
 # we must make sure custom models are known at database initialization!
@@ -32,6 +33,10 @@ class TsammalexMapMarker(MapMarker):
 
         if ILanguage.providedBy(ctx):
             lineage = ctx.lineage
+        elif IValueSet.providedBy(ctx):
+            lineage = ctx.language.lineage
+        elif IValue.providedBy(ctx):
+            lineage = ctx.valueset.language.lineage
 
         if isinstance(ctx, string_types):
             lineage = req.db.query(models.Lineage)\
@@ -46,10 +51,10 @@ class TsammalexMapMarker(MapMarker):
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
-    config = get_configurator(
-        'tsammalex', (TsammalexMapMarker(), IMapMarker), settings=settings)
-    config.registry.settings['home_comp'].append('contributors')
+    config = Configurator(settings=settings)
     config.include('clldmpg')
+    config.registry.registerUtility(TsammalexMapMarker(), IMapMarker)
+    config.registry.settings['home_comp'].append('contributors')
     config.register_menu(
         ('dataset', dict(label='Home')),
         'values',

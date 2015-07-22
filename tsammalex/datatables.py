@@ -60,28 +60,28 @@ class ThumbnailCol(Col):
         return ''
 
 
-class _CategoryCol(Col):
-    def __init__(self, dt, name, languages, **kw):
-        assert languages
-        self.lang_dict = {l.pk: l for l in languages}
-        q = DBSession.query(Category.name).order_by(Category.name)\
-            .filter(Category.language_pk.in_(list(self.lang_dict.keys())))
-        kw['choices'] = [r[0] for r in q]
-        Col.__init__(self, dt, name, **kw)
+#class _CategoryCol(Col):
+#    def __init__(self, dt, name, languages, **kw):
+#        assert languages
+#        self.lang_dict = {l.pk: l for l in languages}
+#        q = DBSession.query(Category.name).order_by(Category.name)\
+#            .filter(Category.language_pk.in_(list(self.lang_dict.keys())))
+#        kw['choices'] = [r[0] for r in q]
+#        Col.__init__(self, dt, name, **kw)
 
-    def _cat(self, cat):
-        if len(self.lang_dict) > 1:
-            return '%s (%s)' % (cat.name, self.lang_dict[cat.language_pk].id)
-        return cat.name
+#    def _cat(self, cat):
+#        if len(self.lang_dict) > 1:
+#            return '%s (%s)' % (cat.name, self.lang_dict[cat.language_pk].id)
+#        return cat.name
 
-    def format(self, item):
-        obj = self.get_obj(item)
-        names = [
-            self._cat(o) for o in obj.categories if o.language_pk in self.lang_dict]
-        return HTML.ul(*[HTML.li(name) for name in names], class_="unstyled")
+#    def format(self, item):
+#        obj = self.get_obj(item)
+#        names = [
+#            self._cat(o) for o in obj.categories if o.language_pk in self.lang_dict]
+#        return HTML.ul(*[HTML.li(name) for name in names], class_="unstyled")
 
-    def search(self, qs):
-        return Category.name == qs
+#    def search(self, qs):
+#        return Category.name == qs
 
 
 class EcoregionCountryColBase(Col):
@@ -136,7 +136,7 @@ class CommonNameCol(Col):
         for vs in item.valuesets:
             if vs.language_pk == self.lang.pk:
                 return vs.description
-        return ''
+        return ''  # pragma: no cover
 
     def order(self):
         return self.alias.description
@@ -406,10 +406,6 @@ class Names(Values):
                 shared['meaning'],
                 shared['references'],
             ]
-            res.append(LinkCol(self, 'name'))
-            res.append(Col(self, 'blt', sTitle='Generic term', model_col=Value.description))
-            res.append(Col(self, 'ipa', sTitle='IPA', model_col=Name.ipa))
-            res.append(Col(self, 'grammatical_notes', model_col=Name.grammatical_info))
         return [
             shared['name'],
             shared['language'],

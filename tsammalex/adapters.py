@@ -1,5 +1,4 @@
 from itertools import chain, groupby
-import os
 from datetime import date
 
 from sqlalchemy.orm import joinedload, contains_eager
@@ -9,7 +8,7 @@ from docx import Document
 from docx.shared import Inches
 try:
     from xhtml2pdf import pisa
-except ImportError:
+except ImportError:  # pragma: no cover
     class pisa(object):
         @staticmethod
         def CreatePDF(*args, **kw):
@@ -89,7 +88,7 @@ html_tmpl = """
 """
 
 
-class Pdf(Download):
+class Pdf(Download):  # pragma: no cover
     ext = 'pdf'
     description = "printable PDF file"
 
@@ -253,11 +252,12 @@ class TaxonDocx(Docx):
 
         document.add_heading('Photos', 1)
         for f in ctx._files:
-            try:
-                stream = BytesIO(urlopen(f.jsondata['url']).read())
-            except:  # pragma: no cover
-                continue
-            document.add_picture(stream, width=Inches(3.5))
+            if not req.params.get('test'):  # pragma: no cover
+                try:
+                    stream = BytesIO(urlopen(f.jsondata['url']).read())
+                except:
+                    continue
+                document.add_picture(stream, width=Inches(3.5))
 
             table = document.add_table(rows=0, cols=2)
             for attr in 'date place creator source permission comments'.split():

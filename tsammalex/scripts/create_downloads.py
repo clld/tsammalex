@@ -3,7 +3,7 @@ from functools import partial
 from six.moves.urllib.request import urlretrieve
 from purl import URL
 
-from clld.scripts.util import create_downloads, parsed_args
+from clld.scripts.util import parsed_args
 from clld.db.meta import DBSession
 from clld.db.models.common import Language
 
@@ -22,7 +22,7 @@ def cached_path(args, url, rel):
 
 def main(args):
     for lang in DBSession.query(Language):
-        print(lang.name)
+        args.log.info(lang.name)
         Pdf(None, 'tsammalex').create(
             args.env['request'], filename='test.pdf', link_callback=partial(cached_path, args), lang=lang)
 

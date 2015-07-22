@@ -26,8 +26,7 @@ class Tests(TestWithApp):
         self.app.get_dt('/parameters?er=a&sSearch_6=a')
         self.app.get_html('/parameters/pantheraleo')
         self.app.get_json('/parameters/pantheraleo.geojson')
-        # TODO: docx adapter with images requires internet!
-        #self.app.get('/parameters/pantheraleo.docx')
+        self.app.get('/parameters/pantheraleo.docx?test=1')
 
     def test_language(self):
         self.app.get_dt('/languages')
@@ -40,3 +39,10 @@ class Tests(TestWithApp):
         self.app.get_dt('/values?language=ngh')
         self.app.get_dt('/values?language=ngh&sSearch_7=n')
         self.app.get_dt('/values?paramter=pantheraleo')
+
+    def test_contributors(self):
+        self.app.get_dt('/contributors')
+
+    def test_valueset(self):
+        self.app.get_html('/valuesets/abelmoschusesculentus-yornoso')
+        self.app.get_html('/valuesets/abelmoschusesculentus-yornoso.snippet.html')
