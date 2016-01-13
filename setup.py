@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 requires = [
     'clld>=1.5.0,<2.0.0',
-    'clldmpg>=1.1.1',
+    'clldmpg>=1.1.1,<2.0.0',
     'python-docx',
     'pycountry',
 ]
