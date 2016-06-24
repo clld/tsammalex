@@ -7,7 +7,6 @@ from functools import partial
 import re
 
 from purl import URL
-from path import path
 from sqlalchemy.orm import joinedload
 from sqlalchemy import Index
 from clld.scripts.util import (
@@ -17,9 +16,11 @@ from clld.scripts.util import (
 from clld.db.util import collkey, with_collkey_ddl
 from clld.db.meta import DBSession
 from clld.db.models import common
-from clld.lib.dsv import reader
 from clld.lib.bibtex import Database
-from clld.util import nfilter, jsonload
+from clldutils.dsv import reader
+from clldutils.misc import nfilter
+from clldutils.jsonlib import load as jsonload
+from clldutils.path import Path
 
 from tsammalex import models
 from tsammalex.scripts.util import (
@@ -35,7 +36,7 @@ def main(args):
     Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
 
     def data_file(*comps):
-        return path(args.data_repos).joinpath('tsammalexdata', 'data', *comps)
+        return Path(args.data_repos).joinpath('tsammalexdata', 'data', *comps)
 
     data = Data()
     data.add(common.Dataset, 'tsammalex',

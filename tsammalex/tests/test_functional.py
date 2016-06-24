@@ -1,4 +1,4 @@
-from path import path
+from clldutils.path import Path
 
 from clld.tests.util import TestWithApp
 
@@ -6,10 +6,8 @@ import tsammalex
 
 
 class Tests(TestWithApp):
-    __cfg__ = path(tsammalex.__file__)\
-        .dirname().joinpath('..', 'development.ini').abspath()
-    __setup_db__ = False
-    __with_custom_language__ = False
+    __cfg__ = Path(tsammalex.__file__)\
+        .parent.joinpath('..', 'development.ini').resolve()
 
     def test_home(self):
         self.app.get('/', status=200)

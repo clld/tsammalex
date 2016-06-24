@@ -22,7 +22,10 @@ from clld.web.adapters.geojson import (
 )
 from clld.web.adapters.base import Representation
 from clld.web.adapters.download import Download
-from clld.interfaces import ILanguage, IIndex, IRepresentation, IParameter
+from clld.web.adapters.cldf import CldfDataset
+from clld.interfaces import (
+    ILanguage, IIndex, IRepresentation, IParameter, IContribution, ICldfDataset,
+)
 from clld.db.meta import DBSession
 from clld.db.models.common import Parameter, Language, ValueSet
 
@@ -298,10 +301,21 @@ class TaxonDocx(Docx):
             # document.add_page_break()
 
 
+class CldfNamelist(CldfDataset):
+    def refs_and_sources(self, req, obj):
+        refs, sources = [], []
+        for value in obj.values:
+            _refs, _sources = CldfDataset.refs_and_sources(self, req, value)
+            refs.append(_refs)
+            sources.extend(_sources)
+        return ';'.join(refs), sources
+
+
 def includeme(config):
     config.register_adapter(LanguagePdf, ILanguage)
     #config.register_adapter(LanguageDocx, ILanguage)
     config.register_adapter(TaxonDocx, IParameter)
+    config.register_adapter(CldfNamelist, IContribution, ICldfDataset, name='cldf')
     config.register_adapter(GeoJsonEcoregions, IEcoregion, IIndex)
     config.register_adapter(GeoJsonTaxa, IParameter)
     config.register_adapter(GeoJsonLanguoids, ILanguage, IIndex)

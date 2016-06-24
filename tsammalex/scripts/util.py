@@ -3,8 +3,9 @@ from itertools import groupby
 
 from six.moves import reduce
 from pycountry import countries
-from clld.util import nfilter, jsonload
-from clld.lib.dsv import reader
+from clldutils.dsv import reader
+from clldutils.misc import nfilter
+from clldutils.jsonlib import load as jsonload
 
 from tsammalex.models import Biome, Ecoregion, Country
 

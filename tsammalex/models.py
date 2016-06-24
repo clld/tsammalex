@@ -16,7 +16,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from nameparser import HumanName
 
 from clld import interfaces
-from clld.util import slug
+from clldutils.misc import slug
 from clld.db.meta import Base, CustomModelMixin
 from clld.db.models.common import (
     Parameter, IdNameDescriptionMixin, Value, Language, ValueSet, Source, Editor,
@@ -24,7 +24,6 @@ from clld.db.models.common import (
     ContributionContributor,
 )
 from clld.web.util.htmllib import HTML
-from clld.web.util.helpers import linked_references
 
 from tsammalex.interfaces import IEcoregion
 

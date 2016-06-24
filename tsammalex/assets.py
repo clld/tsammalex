@@ -1,9 +1,10 @@
 from clld.web.assets import environment
-from path import path
+from clldutils.path import Path
 
 import tsammalex
 
 
 environment.append_path(
-    path(tsammalex.__file__).dirname().joinpath('static'), url='/tsammalex:static/')
+    Path(tsammalex.__file__).parent.joinpath('static').as_posix(),
+    url='/tsammalex:static/')
 environment.load_path = list(reversed(environment.load_path))
