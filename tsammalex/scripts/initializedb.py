@@ -54,7 +54,10 @@ def main(args):
             'license_icon': 'cc-by.png',
             'license_name': 'Creative Commons Attribution 4.0 International License'})
     data.add(common.Contribution, 'tsammalex', name="Tsammalex", id="tsammalex")
-    glottolog = glottocodes_by_isocode('postgresql://robert@/glottolog3')
+    try:
+        glottolog = glottocodes_by_isocode('postgresql://robert@/glottolog3')
+    except:
+        glottolog = {}
 
     for rec in Database.from_file(data_file('sources.bib'), lowercase=True):
         data.add(models.Bibrec, rec.id, _obj=bibtex2source(rec, cls=models.Bibrec))
