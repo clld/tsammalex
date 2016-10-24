@@ -302,13 +302,7 @@ class TaxonDocx(Docx):
 
 
 class CldfNamelist(CldfDataset):
-    def refs_and_sources(self, req, obj):
-        refs, sources = [], []
-        for value in obj.values:
-            _refs, _sources = CldfDataset.refs_and_sources(self, req, value)
-            refs.append(_refs)
-            sources.extend(_sources)
-        return ';'.join(refs), sources
+    pass
 
 
 def includeme(config):

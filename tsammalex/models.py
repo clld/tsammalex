@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Float,
     Boolean,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship, backref, joinedload_all, joinedload
 from sqlalchemy.ext.declarative import declared_attr
@@ -52,8 +53,10 @@ def parse_ref_ids(s):
 
 
 class ImageData(Base):
-    image_pk = Column(Integer, ForeignKey('parameter_files.pk'), primary_key=True)
-    key = Column(Unicode, primary_key=True)
+    __table_args__ = (UniqueConstraint('image_pk', 'key'),)
+
+    image_pk = Column(Integer, ForeignKey('parameter_files.pk'))
+    key = Column(Unicode)
     value = Column(Unicode)
     image = relationship(Parameter_files, uselist=False, backref='data')
 

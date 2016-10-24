@@ -12,7 +12,7 @@ from tsammalex.models import Biome, Ecoregion, Country
 
 def data_files(data_file, name):
     files = [data_file(name)]
-    heath = files[0].dirname().joinpath('heath', files[0].basename())
+    heath = files[0].parent.joinpath('heath', files[0].name)
     if heath.exists():
         files.append(heath)
     return files

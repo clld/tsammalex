@@ -33,7 +33,8 @@ with_collkey_ddl()
 
 
 def main(args):
-    Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
+    if DBSession.bind.dialect.name == 'postgresql':
+        Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
 
     def data_file(*comps):
         return Path(args.data_repos).joinpath('tsammalexdata', 'data', *comps)
