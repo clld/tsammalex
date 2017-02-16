@@ -29,7 +29,7 @@ TSAMMALEX.highlightEcoregion = function(layer) {
 CLLD.LayerOptions.ecoregions = {
     style: TSAMMALEX.style,
     onEachFeature: function(feature, layer) {
-        layer.bindLabel(feature.properties.label);
+        layer.bindTooltip(feature.properties.label);
         CLLD.Maps.map.marker_map[feature.properties.id] = layer;
 
         // Create a self-invoking function that passes in the layer
