@@ -10,8 +10,7 @@ from purl import URL
 from sqlalchemy.orm import joinedload
 from sqlalchemy import Index
 from clld.scripts.util import (
-    initializedb, Data, bibtex2source, glottocodes_by_isocode, add_language_codes,
-    ExistingDir,
+    initializedb, Data, bibtex2source, add_language_codes, ExistingDir,
 )
 from clld.db.util import collkey, with_collkey_ddl
 from clld.db.meta import DBSession
@@ -40,24 +39,22 @@ def main(args):
         return Path(args.data_repos).joinpath('tsammalexdata', 'data', *comps)
 
     data = Data()
-    data.add(common.Dataset, 'tsammalex',
+    data.add(
+        common.Dataset,
+        'tsammalex',
         id="tsammalex",
         name="Tsammalex",
         description="Tsammalex: A lexical database on plants and animals",
-        publisher_name="Max Planck Institute for Evolutionary Anthropology",
-        publisher_place="Leipzig",
-        publisher_url="http://www.eva.mpg.de",
+        publisher_name="Max Planck Institute for the Science of Human History",
+        publisher_place="Jena",
+        publisher_url="http://www.shh.mpg.de",
         domain='tsammalex.clld.org',
         license='http://creativecommons.org/licenses/by/4.0/',
-        contact='naumann@eva.mpg.de',
+        contact='forkel@shh.mpg.de',
         jsondata={
             'license_icon': 'cc-by.png',
             'license_name': 'Creative Commons Attribution 4.0 International License'})
     data.add(common.Contribution, 'tsammalex', name="Tsammalex", id="tsammalex")
-    try:
-        glottolog = glottocodes_by_isocode('postgresql://robert@/glottolog3')
-    except:
-        glottolog = {}
 
     for rec in Database.from_file(data_file('sources.bib'), lowercase=True):
         data.add(models.Bibrec, rec.id, _obj=bibtex2source(rec, cls=models.Bibrec))
@@ -67,12 +64,8 @@ def main(args):
     second_languages = {}
 
     def languoid_visitor(lang, row, _):
-        try:
-            add_language_codes(
-                data, lang, lang.id.split('-')[0], glottolog, glottocode=row[2] or None)
-        except:
-            print(row)
-            raise
+        add_language_codes(
+            data, lang, lang.id.split('-')[0], None, glottocode=row[2] or None)
         second_languages[row[0]] = row[8]
 
     def habitat_visitor(cat, *_):
@@ -111,6 +104,7 @@ def main(args):
             '/original/', '/%s/' % type_)
 
     for fname in data_files(data_file, 'images.csv'):
+
         for image in reader(fname, namedtuples=True, delimiter=","):
             if image.taxa__id not in data['Taxon']:
                 continue
