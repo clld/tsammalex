@@ -17,6 +17,7 @@ from path import path
 
 from clld.web.util.helpers import text_citation, charis_font_spec_css
 from clld.web.adapters import get_adapter
+from clld.web.adapters import csv
 from clld.web.adapters.geojson import (
     GeoJsonParameterMultipleValueSets, GeoJson, GeoJsonLanguages,
 )
