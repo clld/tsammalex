@@ -20,7 +20,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'clld>=3.2.0',
+        'clld>=3.2.4',
         'clldmpg>=2.0.0',
         'python-docx',
         'pycountry',
