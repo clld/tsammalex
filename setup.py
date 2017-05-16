@@ -21,7 +21,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'clld>=3.2.5',
-        'clldmpg>=2.0.0',
+        'clldmpg>=2.4.0',
         'python-docx',
         'pycountry',
     ],
