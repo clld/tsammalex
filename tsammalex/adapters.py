@@ -13,20 +13,16 @@ except ImportError:  # pragma: no cover
         @staticmethod
         def CreatePDF(*args, **kw):
             print("ERROR: xhtml2pdf is not installed!")
-from path import path
+from clldutils.path import Path
 
 from clld.web.util.helpers import text_citation, charis_font_spec_css
 from clld.web.adapters import get_adapter
-from clld.web.adapters import csv
 from clld.web.adapters.geojson import (
     GeoJsonParameterMultipleValueSets, GeoJson, GeoJsonLanguages,
 )
 from clld.web.adapters.base import Representation
 from clld.web.adapters.download import Download
-from clld.web.adapters.cldf import CldfDataset
-from clld.interfaces import (
-    ILanguage, IIndex, IRepresentation, IParameter, IContribution, ICldfDataset,
-)
+from clld.interfaces import ILanguage, IIndex, IRepresentation, IParameter
 from clld.db.meta import DBSession
 from clld.db.models.common import Parameter, Language, ValueSet
 
@@ -36,7 +32,7 @@ from tsammalex.models import Taxon
 
 
 download_path = lambda basename: \
-    path(tsammalex.__file__).dirname().joinpath('static', 'download', basename)
+    Path(tsammalex.__file__).parent.joinpath('static', 'download', basename)
 
 
 css_tmpl = """
@@ -130,7 +126,7 @@ class Pdf(Download):  # pragma: no cover
                                 html.append(adapter.render(entry, req))
                                 html.append('<p class="separator">&nbsp;<p>')
 
-        with open(download_path('%s.pdf' % lang.id), 'wb') as fp:
+        with open(str(download_path('%s.pdf' % lang.id)), 'wb') as fp:
             editors = ''
             if lang.contribution.contributor_assocs:
                 editors = 'edited by ' + ' and '.join(
@@ -208,6 +204,9 @@ class LanguagePdf(Representation):
     extension = 'pdf'
 
     def render(self, ctx, req):
+        #
+        #FIXME: raise redirect!
+        #
         fname = download_path('%s.pdf' % ctx.id)
         if fname.exists():
             return fname.bytes()
@@ -302,15 +301,10 @@ class TaxonDocx(Docx):
             # document.add_page_break()
 
 
-class CldfNamelist(CldfDataset):
-    pass
-
-
 def includeme(config):
     config.register_adapter(LanguagePdf, ILanguage)
     #config.register_adapter(LanguageDocx, ILanguage)
     config.register_adapter(TaxonDocx, IParameter)
-    config.register_adapter(CldfNamelist, IContribution, ICldfDataset, name='cldf')
     config.register_adapter(GeoJsonEcoregions, IEcoregion, IIndex)
     config.register_adapter(GeoJsonTaxa, IParameter)
     config.register_adapter(GeoJsonLanguoids, ILanguage, IIndex)

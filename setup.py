@@ -20,15 +20,25 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'clld>=3.2.7',
-        'clldmpg>=2.4.1',
+        'clldmpg~=3.1',
         'python-docx',
         'pycountry',
     ],
-    tests_require=[
-        'WebTest >= 1.3.1',  # py3 compat
-        'mock>=2.0',
-    ],
+    extras_require={
+        'dev': ['flake8', 'waitress'],
+        'test': [
+            'psycopg2',
+            'tox',
+            'mock',
+            'pytest>=3.1',
+            'pytest-clld',
+            'pytest-mock',
+            'pytest-cov',
+            'coverage>=4.2',
+            'selenium',
+            'zope.component>=3.11.0',
+        ],
+    },
     test_suite="tsammalex",
     entry_points="""\
 [paste.app_factory]

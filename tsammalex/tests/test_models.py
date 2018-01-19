@@ -1,7 +1,6 @@
 from __future__ import unicode_literals
 
 from clld.scripts.util import Data
-from clld.tests.util import TestWithEnv
 from clld.db.models import common
 
 
@@ -30,27 +29,24 @@ DATA = {
 }
 
 
-class Tests(TestWithEnv):
-    __with_custom_language__ = False
+def test_from_csv(env):
+    from tsammalex import models as m
 
-    def test_from_csv(self):
-        from tsammalex import models as m
+    data = Data()
+    data.add(common.Dataset, 'tsammalex', id='tsammalex')
+    data.add(common.Contribution, 'tsammalex', id='tsammalex')
+    data.add(m.Ecoregion, 'AT1309', id='AT1309')
+    data.add(m.Bibrec, 'ref1', id='ref1')
+    data.add(m.Bibrec, 'ref2', id='ref2')
 
-        data = Data()
-        data.add(common.Dataset, 'tsammalex', id='tsammalex')
-        data.add(common.Contribution, 'tsammalex', id='tsammalex')
-        data.add(m.Ecoregion, 'AT1309', id='AT1309')
-        data.add(m.Bibrec, 'ref1', id='ref1')
-        data.add(m.Bibrec, 'ref2', id='ref2')
-
-        for name, cls in [
-            ('contributors', m.TsammalexContributor),
-            ('taxa', m.Taxon),
-            ('lineages', m.Lineage),
-            ('languages', m.Languoid),
-            ('categories', m.Category),
-            ('names', m.Name)
-        ]:
-            for row in DATA[name]:
-                obj = cls.from_csv(row.split(','), data=data)
-                data.add(cls, obj.id, _obj=obj)
+    for name, cls in [
+        ('contributors', m.TsammalexContributor),
+        ('taxa', m.Taxon),
+        ('lineages', m.Lineage),
+        ('languages', m.Languoid),
+        ('categories', m.Category),
+        ('names', m.Name)
+    ]:
+        for row in DATA[name]:
+            obj = cls.from_csv(row.split(','), data=data)
+            data.add(cls, obj.id, _obj=obj)
