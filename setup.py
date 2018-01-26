@@ -20,9 +20,12 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
+        'clld~=4.0',
         'clldmpg~=3.1',
         'python-docx',
+        'sqlalchemy',
         'pycountry',
+        'waitress',
     ],
     extras_require={
         'dev': ['flake8', 'waitress'],
