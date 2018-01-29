@@ -30,6 +30,7 @@ import tsammalex
 from tsammalex.interfaces import IEcoregion
 from tsammalex.models import Taxon
 
+from pyramid import httpexceptions
 
 download_path = lambda basename: \
     Path(tsammalex.__file__).parent.joinpath('static', 'download', basename)
@@ -204,12 +205,11 @@ class LanguagePdf(Representation):
     extension = 'pdf'
 
     def render(self, ctx, req):
-        #
-        #FIXME: raise redirect!
-        #
-        fname = download_path('%s.pdf' % ctx.id)
-        if fname.exists():
-            return fname.bytes()
+        try:
+            if ctx.jsondata['pdf_url']:
+                raise httpexceptions.HTTPFound(ctx.jsondata['pdf_url'])
+        except KeyError:
+            raise httpexceptions.HTTPNotFound
 
 
 class Docx(Representation):
