@@ -206,12 +206,7 @@ class LanguagePdf(Representation):
 
     def render(self, ctx, req):
         url = ctx.jsondata.get('pdf_url')
-
-        if url:
-            raise httpexceptions.HTTPFound(ctx.jsondata['pdf_url'])
-        else:
-            raise httpexceptions.HTTPNotFound
-
+        raise httpexceptions.HTTPFound(url)
 
 class Docx(Representation):
     mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
