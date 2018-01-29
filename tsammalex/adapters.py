@@ -205,10 +205,11 @@ class LanguagePdf(Representation):
     extension = 'pdf'
 
     def render(self, ctx, req):
-        try:
-            if ctx.jsondata['pdf_url']:
-                raise httpexceptions.HTTPFound(ctx.jsondata['pdf_url'])
-        except KeyError:
+        url = ctx.jsondata.get('pdf_url')
+
+        if url:
+            raise httpexceptions.HTTPFound(ctx.jsondata['pdf_url'])
+        else:
             raise httpexceptions.HTTPNotFound
 
 
