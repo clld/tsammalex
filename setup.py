@@ -28,9 +28,12 @@ setup(
         'waitress',
     ],
     extras_require={
-        'dev': ['flake8', 'waitress', 'psycopg2'],
-        'test': [
+        'dev': [
+            'flake8',
+            'psycopg2',
             'tox',
+        ],
+        'test': [
             'mock',
             'pytest>=3.1',
             'pytest-clld',
