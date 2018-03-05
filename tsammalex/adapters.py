@@ -256,7 +256,11 @@ class TaxonDocx(Docx):
                     stream = BytesIO(urlopen(f.jsondata['url']).read())
                 except:
                     continue
-                document.add_picture(stream, width=Inches(3.5))
+
+                try:
+                    document.add_picture(stream, width=Inches(3.5))
+                except ZeroDivisionError:
+                    continue
 
             table = document.add_table(rows=0, cols=2)
             for attr in 'date place creator source permission comments'.split():
