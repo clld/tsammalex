@@ -31,6 +31,7 @@ from tsammalex.interfaces import IEcoregion
 from tsammalex.models import Taxon
 
 from pyramid import httpexceptions
+from docx.image.exceptions import UnrecognizedImageError
 
 download_path = lambda basename: \
     Path(tsammalex.__file__).parent.joinpath('static', 'download', basename)
@@ -259,7 +260,7 @@ class TaxonDocx(Docx):
 
                 try:
                     document.add_picture(stream, width=Inches(3.5))
-                except ZeroDivisionError:
+                except (ZeroDivisionError, UnrecognizedImageError):
                     continue
 
             table = document.add_table(rows=0, cols=2)
