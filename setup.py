@@ -24,7 +24,7 @@ setup(
         'clldmpg~=3.1',
         'python-docx',
         'sqlalchemy',
-        'pycountry',
+        'pycountry>=16.11.8',
         'waitress',
     ],
     extras_require={

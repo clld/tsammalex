@@ -68,7 +68,8 @@ def get_center(arr):
 
 def load_countries(data):
     for country in countries:
-        data.add(Country, country.alpha2, id=country.alpha2, name=country.name)
+        data.add(Country, country.alpha_2, id=country.alpha_2,
+                 name=country.name)
 
 
 def load_ecoregions(data_file, data):
