@@ -1,6 +1,3 @@
-from __future__ import unicode_literals, absolute_import, division, print_function
-
-from six import string_types
 from zope.interface import classImplements
 from pyramid.config import Configurator
 
@@ -38,7 +35,7 @@ class TsammalexMapMarker(MapMarker):
         elif IValue.providedBy(ctx):
             lineage = ctx.valueset.language.lineage
 
-        if isinstance(ctx, string_types):
+        if isinstance(ctx, str):
             lineage = req.db.query(models.Lineage)\
                 .filter(models.Lineage.name == ctx).one()
 

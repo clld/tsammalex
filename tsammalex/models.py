@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import, division
 import re
 
 from zope.interface import implementer
@@ -12,7 +11,7 @@ from sqlalchemy import (
     Boolean,
     UniqueConstraint,
 )
-from sqlalchemy.orm import relationship, backref, joinedload_all, joinedload
+from sqlalchemy.orm import relationship, backref, joinedload
 from sqlalchemy.ext.declarative import declared_attr
 from nameparser import HumanName
 
@@ -335,8 +334,8 @@ class Name(CustomModelMixin, Value):
         return session.query(cls)\
             .join(ValueSet).join(Language).order_by(Language.id, cls.name, cls.id)\
             .options(
-                joinedload_all(cls.valueset, ValueSet.language),
-                joinedload_all(cls.valueset, ValueSet.parameter))
+                joinedload(cls.valueset).joinedload(ValueSet.language),
+                joinedload(cls.valueset).joinedload(ValueSet.parameter))
 
     @classmethod
     def from_csv(cls, row, data=None, description=None):

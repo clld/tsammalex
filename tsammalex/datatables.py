@@ -1,6 +1,5 @@
-# coding: utf8
 from sqlalchemy import and_, null, or_, false, true
-from sqlalchemy.orm import joinedload, joinedload_all, aliased, contains_eager
+from sqlalchemy.orm import joinedload, aliased, contains_eager
 
 from clld.web.datatables.base import DataTable, Col, LinkCol, IdCol
 from clld.web.datatables.parameter import Parameters
@@ -347,14 +346,14 @@ class Names(Values):
 
         if self.parameter:
             query = query.join(Languoid.lineage).options(
-                joinedload_all(Value.valueset, ValueSet.language, Languoid.lineage)
+                joinedload(Value.valueset).joinedload(ValueSet.language).joinedload(Languoid.lineage)
             )
         else:
             query = query.options(joinedload(
                 Value.valueset, ValueSet.parameter, Parameter._files))
         return query.options(
-            joinedload_all(Value.valueset, ValueSet.parameter),
-            joinedload_all(Name.references, NameReference.source))
+            joinedload(Value.valueset).joinedload(ValueSet.parameter),
+            joinedload(Name.references).joinedload(NameReference.source))
 
     def col_defs(self):
         get_param = lambda i: i.valueset.parameter

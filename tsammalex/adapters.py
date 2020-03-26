@@ -2,8 +2,8 @@ from itertools import chain, groupby
 from datetime import date
 
 from sqlalchemy.orm import joinedload, contains_eager
-from six import BytesIO
-from six.moves.urllib.request import urlopen
+from io import BytesIO
+from urllib.request import urlopen
 from docx import Document
 from docx.shared import Inches
 try:

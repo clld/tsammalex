@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from clld.scripts.util import Data
 from clld.db.models import common
 

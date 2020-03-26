@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 from copy import copy
 
 from clld.web.maps import ParameterMap, Map, Legend, Layer, FilterLegend
