@@ -1,22 +1,15 @@
-# coding: utf8
 # pragma: no cover
-from __future__ import unicode_literals, division, absolute_import, print_function
-import sys
 from itertools import groupby
 from functools import partial
 import re
 
 from purl import URL
 from sqlalchemy.orm import joinedload
-from sqlalchemy import Index
-from clld.scripts.util import (
-    initializedb, Data, bibtex2source, add_language_codes, ExistingDir,
-)
-from clld.db.util import collkey, with_collkey_ddl
+from clld.cliutil import Data, bibtex2source, add_language_codes
 from clld.db.meta import DBSession
 from clld.db.models import common
 from clld.lib.bibtex import Database
-from clldutils.dsv import reader
+from csvw.dsv import reader
 from clldutils.misc import nfilter
 from clldutils.jsonlib import load as jsonload
 from clldutils.path import Path
@@ -27,14 +20,7 @@ from tsammalex.scripts.util import (
 )
 
 
-# Make sure, the collkey functions are defined, before trying to create an index.
-with_collkey_ddl()
-
-
 def main(args):
-    if DBSession.bind.dialect.name == 'postgresql':
-        Index('ducet', collkey(common.Value.name)).create(DBSession.bind)
-
     def data_file(*comps):
         return Path(args.data_repos).joinpath('tsammalexdata', 'data', *comps)
 
@@ -157,9 +143,3 @@ def prime_cache(args):
                 instance.active = False
 
     # TODO: assign ThePlantList ids!
-
-
-if __name__ == '__main__':
-    initializedb(
-        (('data_repos',), dict(action=ExistingDir)), create=main, prime_cache=prime_cache)
-    sys.exit(0)

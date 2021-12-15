@@ -10,7 +10,7 @@ from clld.web.util.helpers import (
     HTML, external_link, linked_references, button, icon, map_marker_img,
     maybe_license_link, glottolog_url,
 )
-from clld.db.util import get_distinct_values, as_int, icontains, collkey
+from clld.db.util import get_distinct_values, as_int, icontains
 from clld.db.meta import DBSession
 from clld.db.models.common import Parameter, Value, Language, ValueSet, Parameter_files
 from clldutils.misc import nfilter
@@ -315,7 +315,7 @@ class EnglishNameCol(LinkCol):
 
 class SortableNameCol(LinkCol):
     def order(self):
-        return collkey(Value.name)
+        return Value.name
 
 
 class Names(Values):

@@ -28,7 +28,7 @@ from clld.web.util.htmllib import HTML
 from tsammalex.interfaces import IEcoregion
 
 
-ID_SEP_PATTERN = re.compile('\.|,|;')
+ID_SEP_PATTERN = re.compile(r'\.|,|;')
 
 
 def split_ids(s):
@@ -132,18 +132,6 @@ class TsammalexContributor(CustomModelMixin, Contributor):
     def affiliation(self, value):
         self.address = value
 
-    @classmethod
-    def from_csv(cls, row, data=None):
-        obj = super(TsammalexContributor, cls).from_csv(row)
-        if row[3]:
-            data.add(
-                TsammalexEditor, row[0],
-                ord=int(row[3]),
-                dataset=data['Dataset']['tsammalex'],
-                contributor=obj,
-                sections=row[4])
-        return obj
-
 
 class TsammalexEditor(CustomModelMixin, Editor):
     pk = Column(Integer, ForeignKey('editor.pk'), primary_key=True)
@@ -190,18 +178,6 @@ class Languoid(CustomModelMixin, Language):
             'languages__ids',
         ]
 
-    @classmethod
-    def from_csv(cls, row, data=None):
-        obj = super(Languoid, cls).from_csv(row)
-        obj.lineage = data['Lineage'][row[5]]
-        obj.contribution = Contribution(id=obj.id, name=obj.name)
-        for i, cid in enumerate(split_ids(row[3])):
-            ContributionContributor(
-                contribution=obj.contribution,
-                contributor=data['TsammalexContributor'][cid],
-                ord=i)
-        return obj
-
 
 @implementer(interfaces.ISource)
 class Bibrec(CustomModelMixin, Source):
@@ -243,12 +219,6 @@ class Category(CustomModelMixin, Unit):
 
     def csv_head(self):
         return ['id', 'name', 'description', 'language__id', 'notes']
-
-    @classmethod
-    def from_csv(cls, row, data=None):
-        obj = super(Category, cls).from_csv(row)
-        obj.language = data['Languoid'][row[3]]
-        return obj
 
 
 @implementer(interfaces.IValue)
@@ -336,43 +306,6 @@ class Name(CustomModelMixin, Value):
             .options(
                 joinedload(cls.valueset).joinedload(ValueSet.language),
                 joinedload(cls.valueset).joinedload(ValueSet.parameter))
-
-    @classmethod
-    def from_csv(cls, row, data=None, description=None):
-        obj = cls(**{n: row[i] for i, n in enumerate(cls.__csv_head__) if '__' not in n and n != 'audio'})
-        if not slug(row[1]):
-            obj.active = False
-        row = dict(list(zip(cls.__csv_head__, row)))
-        sid = row['taxa__id']
-        lid = row['languages__id']
-        vsid = '%s-%s' % (sid, lid)
-        if vsid in data['ValueSet']:
-            obj.valueset = data['ValueSet'][vsid]
-        else:
-            # Note: source and references are dumped redundantly with each word, so we
-            # only have to recreate these if a new ValueSet had to be created.
-            obj.valueset = data.add(
-                ValueSet, vsid,
-                id=vsid,
-                parameter=data['Taxon'][sid],
-                language=data['Languoid'][lid],
-                contribution=data['Contribution']['tsammalex'])
-
-        if row['refs__ids']:
-            for i, rid, pages in parse_ref_ids(row['refs__ids']):
-                data.add(
-                    NameReference, '%s-%s' % (obj.id, i),
-                    name=obj,
-                    source=data['Bibrec'][rid],
-                    description=pages or None)
-        for rel, cls in [
-            ('categories', 'Category'),
-            ('habitats', 'Category'),
-            ('uses', 'Use')
-        ]:
-            for id_ in split_ids(row[rel + '__ids']):
-                getattr(obj, rel).append(data[cls][id_.strip()])
-        return obj
 
 
 class NameReference(Base, HasSourceMixin):
@@ -508,19 +441,6 @@ class Taxon(CustomModelMixin, Parameter):
                     % self.name.capitalize().replace(' ', '_'),
                     'BHL',
                     'Biodiversity Heritage Library')] if spec[0]]
-
-    @classmethod
-    def from_csv(cls, row, data=None):
-        obj = super(Taxon, cls).from_csv(row)
-        if row[16]:
-            for i, rid, pages in parse_ref_ids(row[16]):
-                data.add(
-                    TaxonReference, '%s-%s' % (obj.id, i),
-                    taxon=obj,
-                    source=data['Bibrec'][rid],
-                    description=pages or None)
-
-        return obj
 
 
 class TaxonReference(Base, HasSourceMixin):
