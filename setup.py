@@ -20,8 +20,8 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'clld>=6.0.1',
-        'clldmpg>=3.5',
+        'clld>=9',
+        'clldmpg>=4.2',
         'python-docx',
         'sqlalchemy',
         'pycountry>=16.11.8',
@@ -33,7 +33,6 @@ setup(
             'tox',
         ],
         'test': [
-            'mock',
             'psycopg2',
             'pytest>=5',
             'pytest-clld',

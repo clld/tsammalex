@@ -61,7 +61,7 @@ def main(global_config, **settings):
         'sources',
         'images',
         #('contributors', dict(label='Contribute'))
-        ('contribute', lambda ctx, req: (req.route_url('help'), 'Contribute!'))
+        #('contribute', lambda ctx, req: (req.route_url('help'), 'Contribute!'))
     )
     config.register_resource('ecoregion', models.Ecoregion, IEcoregion, with_index=True)
     config.register_resource('image', Parameter_files, IImage, with_index=True)

@@ -45,8 +45,7 @@ Africa).
     ),
     with varying details. The tabs <a href="${request.route_url('sources')}">"References"</a> and
     <a href="${request.route_url('images')}">"Images"</a> include lists of sources and individual
-    images, while <a href="${request.route_url('contributors')}">"Contribute!"</a> provides more information,
-    especially for potential contributors.
+    images.
 </p>
 <p>
     Tsammalex has been developed by
@@ -61,19 +60,15 @@ Africa).
     former versions of the database.
 </p>
 <p>
-    The project is funded by the
+    The project was funded by the Department of Linguistics of the
     ${h.external_link('http://www.eva.mpg.de/', label="Max Planck Insititute for Evolutionary Anthropology's")}
-    ${h.external_link('http://www.eva.mpg.de/linguistics/index.html', label="Department of Linguistics")},
     led by Bernard Comrie. Tsammalex is published as part of the
     ${h.external_link('http://clld.org', 'Cross-Linguistic Linked Data')} project,
-    led by Martin Haspelmath.
+    led by Martin Haspelmath and maintained by the department of Cultural and Linguistic Evolution.
 </p>
 <p>
     The content of this web site including the downloadable database, is published under a
     ${request.dataset.jsondata['license_name']} (unless stated otherwise).
-</p>
-<p>
-    Contributions and comments are highly appreciated! Read more information under "Contribute!".
 </p>
 <p>
     All images and other data included in this database should be under creative commons license.
