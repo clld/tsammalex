@@ -31,12 +31,12 @@ def main(args):
         id="tsammalex",
         name="Tsammalex",
         description="Tsammalex: A lexical database on plants and animals",
-        publisher_name="Max Planck Institute for the Science of Human History",
-        publisher_place="Jena",
-        publisher_url="http://www.shh.mpg.de",
+        publisher_name="Max Planck Institute for Evolutionary Anthropology",
+        publisher_place="Leipzig",
+        publisher_url="http://www.eva.mpg.de",
         domain='tsammalex.clld.org',
         license='http://creativecommons.org/licenses/by/4.0/',
-        contact='forkel@shh.mpg.de',
+        contact='dlce.rdm@eva.mpg.de',
         jsondata={
             'license_icon': 'cc-by.png',
             'license_name': 'Creative Commons Attribution 4.0 International License'})
