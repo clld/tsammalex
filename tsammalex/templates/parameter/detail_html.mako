@@ -77,8 +77,8 @@
     % for f in chunk:
         <div class="span4">
             <div class="well">
-                <a href="${f.jsondata.get('url')}" title="view image">
-                    <img src="${f.jsondata.get('web')}" class="image"/>
+                <a href="${f.jsondata.get('url').replace('.shh.', '.eva.')}" title="view image">
+                    <img src="${f.jsondata.get('web').replace('.shh.', '.eva.')}" class="image"/>
                 </a>
             </div>
             <table class="table table-condensed">
