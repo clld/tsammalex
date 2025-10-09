@@ -26,6 +26,7 @@ setup(
         'sqlalchemy',
         'pycountry>=16.11.8',
         'waitress',
+        'purl',
     ],
     extras_require={
         'dev': [
