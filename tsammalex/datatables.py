@@ -508,7 +508,9 @@ class _ThumbnailCol(Col):
     __kw__ = dict(bSearchable=False, bSortable=False)
 
     def format(self, item):
-        return HTML.img(src=item.jsondata['thumbnail'])
+        from tsammalex import cdstar2s3
+        thumbnail = cdstar2s3.s3url(item.jsondata.get('thumbnail'))
+        return HTML.img(src=thumbnail)
 
 
 class LicenseCol(Col):

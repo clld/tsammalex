@@ -1,6 +1,7 @@
 <%inherit file="../${context.get('request').registry.settings.get('clld.app_template', 'app.mako')}"/>
 <%namespace name="util" file="../util.mako"/>
 <%! active_menu_item = "images" %>
+<%! from tsammalex import cdstar2s3 %>
 <%block name="title">Image ${ctx.id}</%block>
 
 <h2>Image ${ctx.id}</h2>
@@ -8,8 +9,8 @@
 <div class="row-fluid" id="images">
     <div class="span6">
         <div class="well" style="text-align: center;">
-            <a href="${ctx.jsondata.get('url')}" title="view image">
-                <img src="${ctx.jsondata.get('web')}" class="image"/>
+            <a href="${cdstar2s3.s3url(ctx.jsondata.get('url'))}" title="view image">
+                <img src="${cdstar2s3.s3url(ctx.jsondata.get('web'))}" class="image"/>
             </a>
         </div>
     </div>

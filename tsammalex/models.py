@@ -26,7 +26,7 @@ from clld.db.models.common import (
 from clld.web.util.htmllib import HTML
 
 from tsammalex.interfaces import IEcoregion
-
+from tsammalex import cdstar2s3
 
 ID_SEP_PATTERN = re.compile(r'\.|,|;')
 
@@ -409,7 +409,7 @@ class Taxon(CustomModelMixin, Parameter):
     def image_url(self, type, tag=None, index=None):
         img = self.image(tag=tag, index=index)
         if img:
-            return img.jsondata.get(type).replace('.shh.', '.eva.')
+            return cdstar2s3.s3url(img.jsondata.get(type))
 
     @property
     def link_specs(self):

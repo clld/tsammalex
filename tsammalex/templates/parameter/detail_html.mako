@@ -1,6 +1,8 @@
 <%inherit file="../${context.get('request').registry.settings.get('clld.app_template', 'app.mako')}"/>
 <%namespace name="util" file="../util.mako"/>
 <%! active_menu_item = "parameters" %>
+<%! from tsammalex import cdstar2s3 %>
+
 <%block name="title">${ctx.name}${' (' + ctx.english_name + ')' if ctx.english_name else ''}</%block>
 
 <% dt = request.get_datatable('values', h.models.Value, parameter=ctx) %>
@@ -77,8 +79,8 @@
     % for f in chunk:
         <div class="span4">
             <div class="well">
-                <a href="${f.jsondata.get('url').replace('.shh.', '.eva.')}" title="view image">
-                    <img src="${f.jsondata.get('web').replace('.shh.', '.eva.')}" class="image"/>
+                <a href="${cdstar2s3.s3url(f.jsondata.get('url'))}" title="view image">
+                    <img src="${cdstar2s3.s3url(f.jsondata.get('web'))}" class="image"/>
                 </a>
             </div>
             <table class="table table-condensed">

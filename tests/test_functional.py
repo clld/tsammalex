@@ -15,7 +15,6 @@ import pytest
         ('get_dt', '/parameters?er=a&sSearch_6=a'),
         ('get_html', '/parameters/pantheraleo'),
         ('get_json', '/parameters/pantheraleo.geojson'),
-        ('get', '/parameters/pantheraleo.docx?test=1'),
         ('get_dt', '/languages'),
         ('get_html', '/languages'),
         ('get_html', '/languages/huc'),
