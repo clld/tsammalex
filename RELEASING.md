@@ -7,12 +7,6 @@ pip install -e .[test]
 ```
 
 ```shell
-unzip tsammalex.sql.zip
-createdb tsammalex
-psql -d tsammalex -f tsammalex.sql
-```
-
-```shell
 pytest
 ```
 
@@ -23,8 +17,6 @@ pip freeze > requirements.txt
 
 Store a db dump:
 ```shell
-pg_dump -xO tsammalex > tsammalex.sql
-zip tsammalex.sql.zip tsammalex.sql
-rm tsammalex.sql
+pg_dump -xO --compress gzip:9 tsammalex > tsammalex.sql.gz
 ```
 
