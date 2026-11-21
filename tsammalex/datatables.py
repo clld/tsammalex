@@ -346,7 +346,7 @@ class Names(Values):
 
         if self.parameter:
             query = query.join(Languoid.lineage).options(
-                joinedload(Value.valueset).joinedload(ValueSet.language).joinedload(Languoid.lineage)
+                joinedload(Value.valueset).joinedload(ValueSet.language.of_type(Languoid)).joinedload(Languoid.lineage)
             )
         else:
             query = query.options(joinedload(
