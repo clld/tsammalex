@@ -13,7 +13,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, backref, joinedload
 from sqlalchemy.ext.declarative import declared_attr
-from nameparser import HumanName
+import nameparser
 
 from clld import interfaces
 from clldutils.misc import slug
@@ -107,14 +107,14 @@ class TsammalexContributor(CustomModelMixin, Contributor):
     research_project = Column(Unicode)
 
     def last_first(self):
-        return '{0.first} {0.last}'.format(self.parsed_name)
+        return f'{self.parsed_name.given} {self.parsed_name.family}'
 
     def csv_head(self):
         return 'id,name,sections,editor_ord,editor_sections,address,research_project,url,description'.split(',')
 
     @property
     def parsed_name(self):
-        return HumanName(self.name)
+        return nameparser.parse(self.name)
 
     @property
     def notes(self):

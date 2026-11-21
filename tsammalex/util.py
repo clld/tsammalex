@@ -1,6 +1,6 @@
+import urllib.parse
 from collections import OrderedDict
 
-from purl import URL
 from sqlalchemy.orm import joinedload, contains_eager
 
 from clld.web.util.multiselect import MultiSelect
@@ -18,11 +18,11 @@ def license_name(license_url):
         return 'GNU Free Documentation License'
     if license_url == 'http://en.wikipedia.org/wiki/Public_domain':
         license_url = 'http://creativecommons.org/publicdomain/zero/1.0/'
-    license_url_ = URL(license_url)
-    if license_url_.host() != 'creativecommons.org':
+    license_url_ = urllib.parse.urlparse(license_url)
+    if license_url_.netloc != 'creativecommons.org':
         return license_url
 
-    comps = license_url_.path().split('/')
+    comps = license_url_.path.split('/')
     if len(comps) < 3:
         return license_url
 
@@ -54,7 +54,7 @@ def names_in_2nd_languages(vs):
 
 def source_link(source):
     label = source
-    host = URL(source).host()
+    host = urllib.parse.urlparse(source).netloc
     if host == 'commons.wikimedia.org':
         label = 'wikimedia'
     elif host == 'en.wikipedia.org':
